@@ -1,9 +1,14 @@
 ---
 title: "Simulating Glycolipid MALDI-TOF-MS of Complex Samples"
 Author: "William E Fondrie"
-Date: "5/15/17"
+Date: "7/20/17"
 output: github_document
 ---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
 # Load Libraries
 
 ```{r loadLibraries}
@@ -32,7 +37,7 @@ files <- list.files("../data/fullLib",
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-files <- sample(files, 100)
+#files <- sample(files, 100)
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -69,7 +74,7 @@ selectLinearCombos <- function(n, info) {
 
 
 #numSpecies <- rep(c(1:5), 2000)
-numSpecies <- rep(c(1:5), 20)
+numSpecies <- rep(c(2:5), 20)
 
 
 combos <- tibble(spec_id = as.factor(paste0("spec_", 1:length(numSpecies))),
@@ -92,15 +97,15 @@ saveRDS(comboSummary, file = "../temp/complexSpectraSummary.RDS")
 saveRDS(combos, file = "../temp/complexComponents.RDS")
 ```
 
-# Create Complex Spectra from Selections
+# Create Complex Spectra from Selections And Extract Features
 
 ```{r createSpectra}
-# list of features, created in rmd/pt1_featureSelection.rmd
-features <- readRDS("temp/features.RDS")
+# list of features, created in rmd/modelTraining.rmd
+features <- readRDS("../temp/features.RDS")
 
 specList <- preProcessSpec(files, hws = 80) # Same preprocessing
 
-# filter out files that contain multiple spectra
+# rm files that contain multiple spectra
 multiSpecIdx <- map_lgl(specList, ~ metaData(.)$num > 1)
 specList <- specList[!multiSpecIdx]
 
@@ -152,39 +157,11 @@ mlFeat <- feattbl %>%
   spread(key = feat, value = relInt, fill = 0) %>%
   left_join(comboSummary, by = c("id" = "spec_id")) 
 
-saveRDS(mlFeat, file = "temp/complexFeatures.RDS")
+saveRDS(mlFeat, file = "../temp/complexFeatures.RDS")
 ```
 
 
-# Make a pretty figure
 
-```{r libraryDistro}
-specInfo %>% 
-  group_by(species) %>%
-  mutate(num = length(id)) %>%
-  ungroup() %>%
-  mutate(`Colistin\nResistant` = 
-           ifelse(AbRes == "pos" | KpRes == "pos", "+", NA),
-         `Colistin\nResistant` = 
-           ifelse(AbSus == "pos" | KpSus == "pos", "-", `Colistin\nResistant`),
-         `Colistin\nResistant` = fct_rev(`Colistin\nResistant`),
-         species = fct_lump(species, 10),
-         species = fct_reorder(species, num)) %>%
-  ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
-  geom_bar(color = "black") +
-  ylab("Number of Mass Spectra") +
-  scale_fill_discrete(breaks = c("+","-")) +
-  coord_flip() +
-  coolTheme +
-  theme(legend.position = c(0.95, 0.05),
-        legend.justification = c(1,0),
-        axis.title.y = element_blank())
-
-ggsave("results/library.png", height = 4, width = 6)
-
-summary(specInfo$species)
-length(unique(specInfo$species))
-```
 
 
 

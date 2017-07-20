@@ -1,0 +1,103 @@
+---
+title: "Make Misc Figures"
+output: github_document
+---
+
+# Prepare Workspace
+```{r loadLibraries, results = "hide"}
+# data manipulation
+library(tidyverse, quietly = T)
+library(stringr, quietly = T)
+library(forcats, quietly = T)
+
+# handling MALDI spectra
+library(MALDIquant, quietly = T)
+library(MALDIquantForeign, quietly = T)
+
+# import helper functions
+source("../R/preProcessSpec.R")
+source("../R/extract.R")
+source("../R/ggplotTheme.R")
+```
+
+# load data
+```{r}
+files <- list.files("../data/fullLib", 
+                    full.names = T, 
+                    pattern = "mzXML$",
+                    recursive = T)
+
+specInfo <- tibble(fname = files) %>%
+    mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
+           id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
+           species = str_match(type, "^[^ ]+ [^ ]+"),
+           Ab = ifelse(str_detect(type, "Acinetobacter baumannii - res"), "pos", "other"),
+           Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), "pos", "other"),
+           Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
+           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)))
+
+features <- readRDS("../temp/features.RDS")
+
+specList <- preProcessSpec(files, hws = 80) # Same preprocessing
+
+# rm files that contain multiple spectra
+multiSpecIdx <- map_lgl(specList, ~ metaData(.)$num > 1)
+specList <- specList[!multiSpecIdx]
+
+spec <- map_df(specList, extractSpectra)
+
+feattbl <- spec %>%
+  group_by(id) %>%
+  do(extractFeatures(., featureVec = unique(features$mz), tol = 1))
+```
+
+# plot of resistance peaks and their variation
+```{r peaks}
+# Ab
+abFeat <- c("mz2036.4927")
+# Kp
+kpFeat <- c("mz1957.0536", "mz1973.1961")
+
+feattbl %>%
+  filter((str_detect(type, "Klebsiella pneumoniae") & feat %in% kpFeat) |
+           (str_detect(type, "Acinetobacter baumannii") & feat %in% abFeat)) %>%
+  mutate(res = ifelse(str_detect(type, "res"), "Colistin\nResistant", "Colistin\nSensitive"),
+         species = ifelse(str_detect(type, "Acineto"), "Ab", "Kp")) %>%
+  ggplot(aes(y = relInt, x = res)) +
+  geom_jitter(alpha = 0.5) +
+  stat_summary(fun.ymax = median, fun.ymin = median, fun.y = median, color = "red", geom="crossbar") +
+  facet_wrap(~species + feat) + coolTheme
+
+ggsave("../results/resPeaks.png", width = 5, height = 3, unit = "in")
+  
+
+```
+
+# plot of the library
+```{r libraryDistro}
+specInfo %>% 
+  group_by(species) %>%
+  mutate(num = length(id)) %>%
+  ungroup() %>%
+  mutate(`Colistin\nResistant` = 
+           ifelse(Ab == "pos" | Kp == "pos", "+", NA),
+         `Colistin\nResistant` = 
+           ifelse(Ab == "neg" | Kp == "neg", "-", `Colistin\nResistant`),
+         `Colistin\nResistant` = fct_rev(`Colistin\nResistant`),
+         species = fct_lump(species, 10),
+         species = fct_reorder(species, num)) %>%
+  ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
+  geom_bar(color = "black") +
+  ylab("Number of Mass Spectra") +
+  scale_fill_discrete(breaks = c("+","-")) +
+  coord_flip() +
+  coolTheme +
+  theme(legend.position = c(0.95, 0.05),
+        legend.justification = c(1,0),
+        axis.title.y = element_blank())
+
+ggsave("results/library.png", height = 4, width = 6)
+
+summary(specInfo$species)
+length(unique(specInfo$species))
+```

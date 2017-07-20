@@ -102,5 +102,5 @@ mods <- map(orgs, function(org){
 
 names(mods) <- orgs
 
-saveRDS(mods, "temp/finalModels.rds")
+saveRDS(mods, "../temp/finalModels.rds")
 ```
