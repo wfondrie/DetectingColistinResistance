@@ -72,9 +72,7 @@ selectLinearCombos <- function(n, info) {
   return(selected)
 }
 
-
-#numSpecies <- rep(c(1:5), 2000)
-numSpecies <- rep(c(2:5), 20)
+numSpecies <- rep(c(2:5), 3000)
 
 
 combos <- tibble(spec_id = as.factor(paste0("spec_", 1:length(numSpecies))),
