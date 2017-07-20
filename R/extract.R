@@ -85,10 +85,11 @@ extractFeatures <- function(specDf, featureVec, tol) {
   featureVec <- unique(featureVec)
   map_df(featureVec, function(feat) {
     win <- filter(specDf, mz <= feat + tol, mz >= feat - tol)
-    m <- filter(win, relInt == max(relInt)) %>%
-      mutate(real_mz = mz,
-             mz = feat,
-             feat = paste0("mz", round(mz, 4)))
+    m <- filter(win, relInt == max(relInt)) %>% 
+        filter(mz == median(mz)) %>%
+        mutate(real_mz = mz,
+               mz = feat,
+               feat = paste0("mz", round(mz, 4)))
     return(m)
   })
 }

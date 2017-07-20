@@ -1,0 +1,106 @@
+# Train the XGBoost tree models 
+## Prepare the Data
+```{r prepareData}
+prepareData <- function(trainDatList, orgLabs) {
+    dmlist <- map(orgLabs, function(o){
+        dat <- trainDatList[[o]]
+        
+        y <- dat[ , o] %>% mutate(encoding = as.numeric(.[[o]]) - 1)
+        
+        x <- as.matrix(select(dat, starts_with("mz")))
+        
+        return(list(encoding = y,
+                    dat = xgb.DMatrix(x, label = y$encoding)))
+    })
+    
+    names(dmlist) <- orgLabs
+    return(dmlist)
+    
+} 
+
+dmatList <- prepareData(trainDatList, orgLabs = c("Ab", "Kp"))
+
+```
+
+## Rough Model Tuning by grid search
+```{r xgboost_tune1, results = "hide"}
+paramGrid <- expand.grid(max_depth = seq(1, 10, by = 1),
+                              min_child_weight = 1:10,
+                              gamma = c(0, 0.01, 0.05, 0.1, 0.15))
+
+paramGrid$id <- 1:nrow(paramGrid)
+
+
+xgbParams <- list(objective = "multi:softprob",
+                  booster = "gbtree",
+                  num_class = 3)
+
+optimizeXgbParams <- function(params, data, eta) {
+    tune <- xgb.cv(params = xgbParams,
+                   data = data,
+                   nrounds = 20000,
+                   eta = eta,
+                   nfold = 10,
+                   early_stopping_rounds = 100,
+                   max_depth = params$max_depth,
+                   min_child_weight = params$min_child_weight,
+                   gamma = params$gamma,
+                   metrics = "mlogloss")
+    
+    bst <- as.data.frame(tune$evaluation_log) %>%
+        filter(test_mlogloss_mean == min(test_mlogloss_mean))
+    
+    return(cbind(params, bst))
+}
+
+paramRes <- map_df(dmatList, function(org) {
+    paramGrid %>%
+        group_by(id) %>%
+        do(optimizeXgbParams(., org$dat, 0.3))
+}, .id = "org")
+
+
+paramRes %>%
+    filter(org == "Kp") %>%
+    ggplot(aes(y = test_mlogloss_mean, x = min_child_weight, color = as.factor(max_depth), group = as.factor(max_depth))) + 
+    geom_point() +
+    geom_line() +
+    facet_grid(gamma ~ .)
+
+bstParams <- paramRes %>%
+    group_by(org) %>%
+    filter(test_mlogloss_mean == min(test_mlogloss_mean))
+
+```
+
+## Model Refinement
+```{r refinement, results = "none"}
+
+finalParams <- bstParams %>%
+                group_by(org) %>%
+                do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.01))
+
+
+```
+
+## Final Model
+```{r finalModel, results = "none"}
+orgs <- c("Ab", "Kp")
+
+mods <- map(orgs, function(org){
+    
+    params <- finalParams[finalParams$org == org, ]
+    
+    xgb.train(params = xgbParams,
+              data = dmatList[[org]]$dat,
+              nrounds = params$iter,
+              max_depth = params$max_depth,
+              min_child_weight = params$min_child_weight,
+              gamma = params$gamma,
+              eta = 0.01)
+})
+
+names(mods) <- orgs
+
+xgb.importance(model = mods$Kp,  feature_names = colnames(dmatList$Kp$dat))
+```

@@ -3,15 +3,14 @@ title: "R Notebook"
 output: github_document
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_knit$set(root.dir = "..")
+```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ```
 
 # Introduction
 
 # Prepare Workspace
-```{r loadLibraries, results = "hide", echo = FALSE}
+```{r loadLibraries, results = "hide"}
 # data manipulation
 library(tidyverse, quietly = T)
 library(stringr, quietly = T)
@@ -27,13 +26,19 @@ library(PRROC, quietly = T)
 library(xgboost, quietly = T)
 
 # import helper functions
-source("R/preProcessSpec.R")
-source("R/extract.R")
+source("../R/preProcessSpec.R")
+source("../R/extract.R")
 
 # for reproducibility
 set.seed(1832939)
 ```
 
 
-```{r test, child="pt1_importData.rmd"}
+```{r pt1, child="pt1_featureSelection.rmd"}
+```
+
+```{r pt2, child="pt2_extractFeatures.rmd"}
+```
+
+```{r pt3, child="pt3_xgboost.rmd"}
 ```

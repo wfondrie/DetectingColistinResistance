@@ -1,0 +1,65 @@
+# Partition Data
+```{r getFileInfo}
+files <- list.files("../data/fullLib", 
+                    full.names = T, 
+                    pattern = "mzXML$",
+                    recursive = T)
+#files <- sample(files, 50) # uncomment for testing
+
+specInfo <- tibble(fname = files) %>%
+    mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
+           id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
+           Ab = ifelse(str_detect(type, "Acinetobacter baumannii - res"), "pos", "other"),
+           Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), "pos", "other"),
+           Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
+           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)))
+
+trainIdx <- list(Ab = list(idx = createDataPartition(specInfo$Ab, p = 0.6, list = F),
+                           regex = "Acinetobacter baumannii - res"),
+                 Kp = list(idx = createDataPartition(specInfo$Kp, p = 0.6, list = F),
+                           regex = "Klebsiella pneumoniae - res"))
+
+```
+
+# Select Features from Training Data
+```{r determineFeatures, cache = TRUE}
+determineFeatures <- function(trainList, n = 50) {
+    # Preprocess spectra
+    spec <- preProcessSpec(files[trainList$idx], hws = 80)
+    multiSpecIdx <- map_lgl(spec, ~ metaData(.)$num > 1)
+    spec <- spec[!multiSpecIdx]
+
+    # Detect peaks
+    peaks <- detectPeaks(spec, halfWindowSize = 80, SNR = 5)
+    peaks <- binPeaks(peaks, tolerance = 0.5)
+    
+    # extract peaks
+    peakDat <- extractPeaks(peaks, spec)
+    
+    # extract features
+    features <- peakDat %>%
+        mutate(sel = str_detect(type, trainList$regex)) %>%
+        filter(sel) %>%
+        group_by(sel, mz) %>%
+        summarize(relInt = sum(relInt)) %>%
+        group_by(sel) %>%
+        mutate(relInt = relInt / max(relInt)) %>%
+        arrange(desc(relInt)) %>%
+        filter(relInt >= relInt[n]) %>%
+        arrange(desc(mz))
+    
+    return(features)
+}
+
+featureList <- map(trainIdx, determineFeatures)
+trainIdx$Ab$features <- unique(featureList$Ab$mz)
+trainIdx$Kp$features <- unique(featureList$Kp$mz)
+
+
+features <- tibble(response = names(featureList), featList = featureList) %>%
+    unnest() %>%
+    select(response, mz)
+
+features <- unique(features)
+saveRDS(features, file = "../temp/features.RDS")
+```
