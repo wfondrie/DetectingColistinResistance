@@ -28,6 +28,7 @@ library(xgboost, quietly = T)
 # import helper functions
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
+source("../R/prepareData.R")
 
 # for reproducibility
 set.seed(1832939)
@@ -40,7 +41,7 @@ files <- list.files("../data/fullLib",
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-#files <- sample(files, 50) # uncomment for testing
+files <- sample(files, 200) # uncomment for testing
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -54,6 +55,8 @@ trainIdx <- list(Ab = list(idx = createDataPartition(specInfo$Ab, p = 0.6, list 
                            regex = "Acinetobacter baumannii - res"),
                  Kp = list(idx = createDataPartition(specInfo$Kp, p = 0.6, list = F),
                            regex = "Klebsiella pneumoniae - res"))
+
+saveRDS(trainIdx, "../temp/trainIdx.rds")
 
 ```
 
@@ -147,23 +150,6 @@ saveRDS(trainDatList, "../temp/trainDatList.rds")
 # Train the XGBoost tree models 
 ## Prepare the Data
 ```{r prepareData}
-prepareData <- function(trainDatList, orgLabs) {
-    dmlist <- map(orgLabs, function(o){
-        dat <- trainDatList[[o]]
-        
-        y <- dat[ , o] %>% mutate(encoding = as.numeric(.[[o]]) - 1)
-        
-        x <- as.matrix(select(dat, starts_with("mz")))
-        
-        return(list(encoding = y,
-                    dat = xgb.DMatrix(x, label = y$encoding)))
-    })
-    
-    names(dmlist) <- orgLabs
-    return(dmlist)
-    
-} 
-
 dmatList <- prepareData(trainDatList, orgLabs = c("Ab", "Kp"))
 saveRDS(dmatList, "../temp/dmatList.rds")
 
@@ -171,9 +157,13 @@ saveRDS(dmatList, "../temp/dmatList.rds")
 
 ## Rough Model Tuning by grid search
 ```{r xgboost_tune1, results = "hide"}
-paramGrid <- expand.grid(max_depth = seq(1, 10, by = 1),
-                              min_child_weight = 1:10,
-                              gamma = c(0, 0.01, 0.05, 0.1, 0.15))
+# paramGrid <- expand.grid(max_depth = seq(1, 10, by = 1),
+#                               min_child_weight = 1:10,
+#                               gamma = c(0, 0.01, 0.05, 0.1, 0.15))
+
+paramGrid <- expand.grid(max_depth = 5,
+                        min_child_weight = 4,
+                        gamma = 0)
 
 paramGrid$id <- 1:nrow(paramGrid)
 
@@ -223,9 +213,13 @@ bstParams <- paramRes %>%
 ## Model Refinement
 ```{r refinement, results = "none"}
 
+# finalParams <- bstParams %>%
+#                 group_by(org) %>%
+#                 do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.01))
+
 finalParams <- bstParams %>%
                 group_by(org) %>%
-                do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.01))
+                do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.3))
 
 
 ```
@@ -249,4 +243,18 @@ mods <- map(orgs, function(org){
 
 names(mods) <- orgs
 saveRDS(mods, "../temp/finalModels.rds")
+```
+
+
+# Prepare Test Set
+```{r singles}
+
+testDatList <- map(trainIdx, createFeatureTbl, 
+                   mzTol = 1,
+                   testSet = T)
+
+testdmatList <- prepareData(testDatList, orgLabs = c("Ab", "Kp"))
+
+
+saveRDS(testdmatList, "../temp/testDataList.rds")
 ```
