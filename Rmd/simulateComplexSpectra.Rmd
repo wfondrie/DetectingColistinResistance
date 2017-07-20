@@ -1,0 +1,190 @@
+---
+title: "Simulating Glycolipid MALDI-TOF-MS of Complex Samples"
+Author: "William E Fondrie"
+Date: "5/15/17"
+output: github_document
+---
+# Load Libraries
+
+```{r loadLibraries}
+library(plyr, quietly = T)
+library(tidyverse, quietly = T)
+library(MALDIquant, quietly = T)
+library(MALDIquantForeign, quietly = T)
+library(stringr, quietly = T)
+library(doParallel, quietly = T)
+library(forcats, quietly = T)
+
+source("../R/preProcessSpec.R")
+source("../R/extract.R")
+source("../R/ggplotTheme.R")
+
+set.seed(6578548)  
+
+cl <- makeCluster(detectCores() - 1)       # For parallelization
+registerDoParallel(cl)
+```
+
+# Get file info
+
+```{r importSpectra}
+files <- list.files("../data/fullLib", 
+                    full.names = T, 
+                    pattern = "mzXML$",
+                    recursive = T)
+files <- sample(files, 100)
+
+specInfo <- tibble(fname = files) %>%
+    mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
+           id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
+           species = str_match(type, "^[^ ]+ [^ ]+"),
+           Ab = ifelse(str_detect(type, "Acinetobacter baumannii - res"), "pos", "other"),
+           Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), "pos", "other"),
+           Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
+           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)))
+
+summary(specInfo)
+
+```
+
+# Select Linear Combinations
+
+```{r combinations}
+selectLinearCombos <- function(n, info) {
+  
+  speciesSelect <- info %>%
+    group_by(species) %>%
+    summarize(num = length(id)) %>%
+    sample_n(size = n)
+  
+  selected <- speciesSelect %>%
+    left_join(info) %>%
+    group_by(species) %>%
+    sample_n(size = 1) %>%
+    ungroup() %>%
+    mutate(coeff = runif(n, 0.1, 1))
+  
+  return(selected)
+}
+
+
+#numSpecies <- rep(c(1:5), 2000)
+numSpecies <- rep(c(1:5), 20)
+
+
+combos <- tibble(spec_id = as.factor(paste0("spec_", 1:length(numSpecies))),
+                 comp = map(numSpecies, selectLinearCombos, info = specInfo)) %>%
+  unnest()
+
+comboSummary <- combos %>%
+  group_by(spec_id) %>%
+  summarize(n = length(id),
+            AbCoeff = ifelse(any(Ab != "other"), coeff[Ab != "other"] / max(coeff), 0),
+            KpCoeff = ifelse(any(Kp != "other"), coeff[Kp != "other"] / max(coeff), 0),
+            AbPres = ifelse(any(Ab == "pos"), "pos", "other"),
+            KpPres = ifelse(any(Kp == "pos"), "pos", "other"),
+            AbPres = as.factor(ifelse(any(Ab == "neg"), "neg", AbPres)),
+            KpPres = as.factor(ifelse(any(Kp == "neg"), "neg", KpPres)))
+
+summary(comboSummary)
+
+saveRDS(comboSummary, file = "../temp/complexSpectraSummary.RDS")
+saveRDS(combos, file = "../temp/complexComponents.RDS")
+```
+
+# Create Complex Spectra from Selections
+
+```{r createSpectra}
+# list of features, created in rmd/pt1_featureSelection.rmd
+features <- readRDS("temp/features.RDS")
+
+specList <- preProcessSpec(files, hws = 80) # Same preprocessing
+
+# filter out files that contain multiple spectra
+multiSpecIdx <- map_lgl(specList, ~ metaData(.)$num > 1)
+specList <- specList[!multiSpecIdx]
+
+spec <- map_df(specList, extractSpectra)
+
+# Main function to simulate complex spectra
+# - specInfo should contain the file names and coefficients for the constituents of each spectrum
+makeComplexSpec <- function(specInfo) {
+    cmb <- specInfo %>%
+        group_by(spec_id, id, type) %>%
+        do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
+                                            metaData = 
+                                                list(file = paste0("/cmb/", .$spec_id[1], ".mzXML")))) %>%
+        group_by(spec_id) %>%
+        do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum"))
+    
+    newSpec <- extractSpectra(cmb$massSpecObj[[1]])
+    return(newSpec)
+}
+
+# helper function to loop over makeComplexSpec for each spectrum
+f <- function(x, s) {
+    x %>%
+    left_join(s) %>%
+    do(makeComplexSpec(.))
+}
+
+# makes the complex spectra... and takes a ton of memory
+comboSpec <- ddply(combos, "spec_id", f, spec,
+                   .parallel = T,
+                   .paropts = list(
+                     .packages = c("dplyr", "MALDIquant", "stringr"),
+                     .export = c("makeComplexSpec", "extractSpectra")))
+
+saveRDS(comboSpec, "../temp/comboSpec.RDS")
+
+# extract features for prediction
+feattbl <- comboSpec %>%
+  group_by(id) %>%
+  do(extractFeatures(., featureVec = unique(features$mz), tol = 1))
+
+saveRDS(feattbl, "../temp/comboFeatTbl.RDS")
+
+mlFeat <- feattbl %>%
+  select(id, feat, relInt) %>%
+  group_by(id) %>%
+  mutate(relInt = relInt / max(relInt)) %>%
+  ungroup() %>%
+  spread(key = feat, value = relInt, fill = 0) %>%
+  left_join(comboSummary, by = c("id" = "spec_id")) 
+
+saveRDS(mlFeat, file = "temp/complexFeatures.RDS")
+```
+
+
+# Make a pretty figure
+
+```{r libraryDistro}
+specInfo %>% 
+  group_by(species) %>%
+  mutate(num = length(id)) %>%
+  ungroup() %>%
+  mutate(`Colistin\nResistant` = 
+           ifelse(AbRes == "pos" | KpRes == "pos", "+", NA),
+         `Colistin\nResistant` = 
+           ifelse(AbSus == "pos" | KpSus == "pos", "-", `Colistin\nResistant`),
+         `Colistin\nResistant` = fct_rev(`Colistin\nResistant`),
+         species = fct_lump(species, 10),
+         species = fct_reorder(species, num)) %>%
+  ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
+  geom_bar(color = "black") +
+  ylab("Number of Mass Spectra") +
+  scale_fill_discrete(breaks = c("+","-")) +
+  coord_flip() +
+  coolTheme +
+  theme(legend.position = c(0.95, 0.05),
+        legend.justification = c(1,0),
+        axis.title.y = element_blank())
+
+ggsave("results/library.png", height = 4, width = 6)
+
+summary(specInfo$species)
+length(unique(specInfo$species))
+```
+
+
+

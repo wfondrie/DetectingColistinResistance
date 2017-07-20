@@ -102,5 +102,5 @@ mods <- map(orgs, function(org){
 
 names(mods) <- orgs
 
-xgb.importance(model = mods$Kp,  feature_names = colnames(dmatList$Kp$dat))
+saveRDS(mods, "temp/finalModels.rds")
 ```
