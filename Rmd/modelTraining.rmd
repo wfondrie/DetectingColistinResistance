@@ -247,3 +247,8 @@ testdmatList <- prepareData(testDatList, orgLabs = c("Ab", "Kp"))
 
 saveRDS(testdmatList, "../temp/testDataList.rds")
 ```
+
+# Session Information
+```{r sessionInfo}
+devtools::session_info()
+```
