@@ -41,7 +41,7 @@ files <- list.files("../data/fullLib",
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-files <- sample(files, 200) # uncomment for testing
+#files <- sample(files, 200) # uncomment for testing
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -62,13 +62,18 @@ saveRDS(trainIdx, "../temp/trainIdx.rds")
 
 # Select Features from Training Data
 ```{r determineFeatures, cache = TRUE}
-determineFeatures <- function(trainList, n = 20) {
+determineFeatures <- function(trainList, n = 50) {
+    
+    lab <- gsub(" - res", "", trainList$regex)
+    
     # Preprocess spectra
+    cat(paste0("Importing spectra for ",  lab, "...\n"))
     spec <- preProcessSpec(files[trainList$idx], hws = 80)
     multiSpecIdx <- map_lgl(spec, ~ metaData(.)$num > 1)
     spec <- spec[!multiSpecIdx]
 
     # Detect peaks
+    cat(paste0("Peak picking for ",  lab, "...\n"))
     peaks <- detectPeaks(spec, halfWindowSize = 80, SNR = 5)
     peaks <- binPeaks(peaks, tolerance = 0.5)
     
@@ -76,6 +81,7 @@ determineFeatures <- function(trainList, n = 20) {
     peakDat <- extractPeaks(peaks, spec)
     
     # extract features
+    cat(paste0("Determining top ", n, " features for ", lab, "...\n"))
     features <- peakDat %>%
         mutate(sel = str_detect(type, trainList$regex)) %>%
         filter(sel) %>%
@@ -94,7 +100,6 @@ featureList <- map(trainIdx, determineFeatures)
 trainIdx$Ab$features <- unique(featureList$Ab$mz)
 trainIdx$Kp$features <- unique(featureList$Kp$mz)
 
-
 features <- tibble(response = names(featureList), featList = featureList) %>%
     unnest() %>%
     select(response, mz)
@@ -111,15 +116,18 @@ createFeatureTbl <- function(trainList, mzTol, testSet = F) {
     suffix2 <- if(str_detect(trainList$regex, "Acineto")) "_Ab" else "_Kp"
     
     # Preprocess spectra
+    cat(paste0("\nImporting spectra for ", suffix2, "...\n"))
     spec <- preProcessSpec(files[idx], hws = 80)
     multiSpecIdx <- map_lgl(spec, ~ metaData(.)$num > 1)
     spec <- spec[!multiSpecIdx]
     
     # extract spectra 
+    cat(paste0("Extracting spectra for ", suffix2, "...\n"))
     spectbl <- map_df(spec, extractSpectra) %>% 
       mutate(type = as.factor(type), id = as.factor(id))
     
     # extract specified features
+    cat(paste0("Creating features for ", suffix2, "...\n"))
     feattbl <- spectbl %>%
       group_by(id) %>%
       do(extractFeatures(., featureVec = trainList$features, tol = mzTol))
@@ -155,34 +163,30 @@ saveRDS(dmatList, "../temp/dmatList.rds")
 
 ```
 
-## Rough Model Tuning by grid search
+## Hyperparameter Tuning by Grid Search
 ```{r xgboost_tune1, results = "hide"}
-# paramGrid <- expand.grid(max_depth = seq(1, 10, by = 1),
-#                               min_child_weight = 1:10,
-#                               gamma = c(0, 0.01, 0.05, 0.1, 0.15))
-
-paramGrid <- expand.grid(max_depth = 5,
-                        min_child_weight = 4,
-                        gamma = 0)
+paramGrid <- expand.grid(max_depth = seq(1, 10, by = 2),
+                              min_child_weight = c(0, 1, 2, 3),
+                              gamma = c(0, 0.01, 0.05, 0.1))
 
 paramGrid$id <- 1:nrow(paramGrid)
-
 
 xgbParams <- list(objective = "multi:softprob",
                   booster = "gbtree",
                   num_class = 3)
 
-optimizeXgbParams <- function(params, data, eta) {
+optimizeXgbParams <- function(params, data, eta, verbose = F) {
     tune <- xgb.cv(params = xgbParams,
                    data = data,
                    nrounds = 20000,
                    eta = eta,
                    nfold = 10,
-                   early_stopping_rounds = 100,
+                   early_stopping_rounds = 50,
                    max_depth = params$max_depth,
                    min_child_weight = params$min_child_weight,
                    gamma = params$gamma,
-                   metrics = "mlogloss")
+                   metrics = "mlogloss",
+                   verbose = verbose)
     
     bst <- as.data.frame(tune$evaluation_log) %>%
         filter(test_mlogloss_mean == min(test_mlogloss_mean))
@@ -196,14 +200,6 @@ paramRes <- map_df(dmatList, function(org) {
         do(optimizeXgbParams(., org$dat, 0.3))
 }, .id = "org")
 
-
-paramRes %>%
-    filter(org == "Kp") %>%
-    ggplot(aes(y = test_mlogloss_mean, x = min_child_weight, color = as.factor(max_depth), group = as.factor(max_depth))) + 
-    geom_point() +
-    geom_line() +
-    facet_grid(gamma ~ .)
-
 bstParams <- paramRes %>%
     group_by(org) %>%
     filter(test_mlogloss_mean == min(test_mlogloss_mean))
@@ -212,16 +208,9 @@ bstParams <- paramRes %>%
 
 ## Model Refinement
 ```{r refinement, results = "none"}
-
-# finalParams <- bstParams %>%
-#                 group_by(org) %>%
-#                 do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.01))
-
 finalParams <- bstParams %>%
                 group_by(org) %>%
-                do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.3))
-
-
+                do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.01, verbose = T))
 ```
 
 ## Final Model
@@ -229,7 +218,7 @@ finalParams <- bstParams %>%
 orgs <- c("Ab", "Kp")
 
 mods <- map(orgs, function(org){
-    
+    cat(paste0("Training ", org, "\n"))
     params <- finalParams[finalParams$org == org, ]
     
     xgb.train(params = xgbParams,
