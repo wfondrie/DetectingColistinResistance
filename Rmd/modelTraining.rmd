@@ -56,8 +56,6 @@ trainIdx <- list(Ab = list(idx = createDataPartition(specInfo$Ab, p = 0.6, list 
                  Kp = list(idx = createDataPartition(specInfo$Kp, p = 0.6, list = F),
                            regex = "Klebsiella pneumoniae - res"))
 
-saveRDS(trainIdx, "../temp/trainIdx.rds")
-
 ```
 
 # Select Features from Training Data
@@ -99,6 +97,8 @@ determineFeatures <- function(trainList, n = 50) {
 featureList <- map(trainIdx, determineFeatures)
 trainIdx$Ab$features <- unique(featureList$Ab$mz)
 trainIdx$Kp$features <- unique(featureList$Kp$mz)
+
+saveRDS(trainIdx, "../temp/trainIdx.rds")
 
 features <- tibble(response = names(featureList), featList = featureList) %>%
     unnest() %>%
@@ -221,13 +221,14 @@ mods <- map(orgs, function(org){
     cat(paste0("Training ", org, "\n"))
     params <- finalParams[finalParams$org == org, ]
     
-    xgb.train(params = xgbParams,
+    mod <- xgb.train(params = xgbParams,
               data = dmatList[[org]]$dat,
               nrounds = params$iter,
               max_depth = params$max_depth,
               min_child_weight = params$min_child_weight,
               gamma = params$gamma,
               eta = 0.01)
+    xgb.save.raw(mod)
 })
 
 names(mods) <- orgs
@@ -237,15 +238,11 @@ saveRDS(mods, "../temp/finalModels.rds")
 
 # Prepare Test Set
 ```{r singles}
-
 testDatList <- map(trainIdx, createFeatureTbl, 
                    mzTol = 1,
                    testSet = T)
 
-testdmatList <- prepareData(testDatList, orgLabs = c("Ab", "Kp"))
-
-
-saveRDS(testdmatList, "../temp/testDataList.rds")
+saveRDS(testDatList, "../temp/testDatList.rds")
 ```
 
 # Session Information

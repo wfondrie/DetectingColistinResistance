@@ -21,11 +21,16 @@ set.seed(0847532)
 
 # Single species spectra
 ```{r singles}
-testList <- readRDS("../temp/testDataList.rds")
+testList <- readRDS("../temp/testDatList.rds")
+testdmatList <- prepareData(testList, orgLabs = c("Ab", "Kp"))
+
+
 mods <- readRDS("../temp/finalModels.rds")
 
+abMod <- xgb.load(mods$Ab)
+
 # Acinetobacter baumannii
-AbRes <- predict()
+AbRes <- predict(abMod, testList$Ab)
 
 # Klebsiella pneumoniae
 
