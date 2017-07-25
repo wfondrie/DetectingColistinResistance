@@ -15,6 +15,12 @@ library(PRROC, quietly = T)
 library(caret, quietly = T)
 library(xgboost, quietly = T)
 
+# ggplot2 theme
+source("../R/ggplotTheme.R")
+
+# help function
+source("../R/prepareData.R")
+
 # for reproducibility
 set.seed(0847532)
 ```
@@ -27,26 +33,183 @@ testdmatList <- prepareData(testList, orgLabs = c("Ab", "Kp"))
 
 mods <- readRDS("../temp/finalModels.rds")
 
+
+
+formatResults <- function(model, dataList) {
+    results <- as.data.frame(predict(model, dataList$dat, reshape = T))
+    names(results) <- levels(unique(dataList$encoding)[[1]])
+    
+    results <- results %>%
+        mutate(truth = dataList$encoding[[1]],
+               negVsAll = pos + other,
+               posVsAll = neg + other,
+               speciesVsAll = pos + neg,
+               pred = ifelse(neg > pos & neg > other, "neg", NA),
+               pred = ifelse(pos > neg & pos > other, "pos", pred),
+               pred = ifelse(other > neg & other > pos, "other", pred))
+    
+    return(results)
+}
+
+```
+
+## Acinetobacter baumannii
+```{r AbSingleSpec}
 abMod <- xgb.load(mods$Ab)
+abRes <- formatResults(abMod, testdmatList$Ab)
 
-# Acinetobacter baumannii
-AbRes <- predict(abMod, testList$Ab)
+confusionMatrix(data = abRes$pred, reference = abRes$truth, positive = "pos")
 
-# Klebsiella pneumoniae
+# Ab PR curves
+abPosPR <- pr.curve(abRes$pos[abRes$truth == "pos"], 
+                    abRes$pos[abRes$truth != "pos"], curve = T)
 
+abNegPR <- pr.curve(abRes$neg[abRes$truth == "neg"], 
+                    abRes$neg[abRes$truth != "neg"], curve = T)
 
-# From old analysis
-AbRes <- tibble(obs = testSets$AbRes$AbRes)
-AbRes$pred <- predict(modelList[[1]], testSets$AbRes)
-p <- predict(modelList[[1]], testSets$AbRes, type = "prob")
-AbRes <- cbind(AbRes, p)
+abSpeciesPR <- pr.curve(abRes$speciesVsAll[abRes$truth != "other"], 
+                        abRes$speciesVsAll[abRes$truth ==  "other"], curve = T)
 
-confusionMatrix(data = AbRes$pred, reference = AbRes$obs, positive = "pos")
+# Ab ROC curves
+abPosROC <- roc.curve(abRes$pos[abRes$truth == "pos"], 
+                    abRes$pos[abRes$truth != "pos"], curve = T)
 
-AbResPR <- pr.curve(AbRes$pos[AbRes$obs == "pos"], 
-                    AbRes$pos[AbRes$obs == "neg"], curve = T)
+abNegROC <- roc.curve(abRes$neg[abRes$truth == "neg"], 
+                    abRes$neg[abRes$truth != "neg"], curve = T)
 
-AbResROC <- roc.curve(AbRes$pos[AbRes$obs == "pos"], 
-                      AbRes$pos[AbRes$obs == "neg"], curve = T)
+abSpeciesROC <- roc.curve(abRes$speciesVsAll[abRes$truth != "other"], 
+                        abRes$speciesVsAll[abRes$truth ==  "other"], curve = T)
+```
+
+## Klebsiella pneumoniae
+```{r KpSingleSpec}
+kpMod <- xgb.load(mods$Kp)
+kpRes <- formatResults(kpMod, testdmatList$Kp)
+
+confusionMatrix(data = kpRes$pred, reference = kpRes$truth, positive = "pos")
+
+# Kp PR curves
+kpPosPR <- pr.curve(kpRes$pos[kpRes$truth == "pos"], 
+                    kpRes$pos[kpRes$truth != "pos"], curve = T)
+
+kpNegPR <- pr.curve(kpRes$neg[kpRes$truth == "neg"], 
+                    kpRes$neg[kpRes$truth != "neg"], curve = T)
+
+kpSpeciesPR <- pr.curve(kpRes$speciesVsAll[kpRes$truth != "other"], 
+                        kpRes$speciesVsAll[kpRes$truth ==  "other"], curve = T)
+
+# Kp ROC curves
+kpPosROC <- roc.curve(kpRes$pos[kpRes$truth == "pos"], 
+                    kpRes$pos[kpRes$truth != "pos"], curve = T)
+
+kpNegROC <- roc.curve(kpRes$neg[kpRes$truth == "neg"], 
+                    kpRes$neg[kpRes$truth != "neg"], curve = T)
+
+kpSpeciesROC <- roc.curve(kpRes$speciesVsAll[kpRes$truth != "other"], 
+                        kpRes$speciesVsAll[kpRes$truth ==  "other"], curve = T)
+```
+
+## Plot PR and ROC Curves
+### Acinetobacter PR  & ROC Curves
+```{r, AbPR}
+# PR
+prnames <- c("Recall", "Precision", "threshold")
+prAb <- as.tibble(rbind(abPosPR$curve, abNegPR$curve, abSpeciesPR$curve))
+names(prAb) <- prnames
+
+labsAb <- c(paste0("Resistant Ab, AUC = ", round(abPosPR$auc.integral, 3)),
+            paste0("Susceptible Ab, AUC = ", round(abNegPR$auc.integral, 3)),
+            paste0("Ab Species, AUC = ", round(abSpeciesPR$auc.integral, 3)))
+
+prAb %>%
+    mutate(cond = c(rep(labsAb[1], nrow(abPosPR$curve)),
+                    rep(labsAb[2], nrow(abNegPR$curve)),
+                    rep(labsAb[3], nrow(abSpeciesPR$curve)))) %>%
+    ggplot(aes(x = Recall, y = Precision, color = cond)) +
+    geom_path(size = 1) + 
+    coolTheme +
+    theme(legend.position = c(0.05,0.05),
+          legend.justification = c(0,0),
+          legend.title = element_blank()) +
+    coord_equal() +
+    ggtitle("Precision-Recall")
+
+ggsave("../results/AbPrCurve.png", width = 3.5, height = 3.5)
+
+# ROC
+rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
+rocAb <- as.tibble(rbind(abPosROC$curve, abNegROC$curve, abSpeciesROC$curve))
+names(rocAb) <- rocnames
+
+roclabsAb <- c(paste0("Resistant Ab, AUC = ", round(abPosROC$auc, 3)),
+               paste0("Susceptible Ab, AUC = ", round(abNegROC$auc, 3)),
+               paste0("Ab Species, AUC = ", round(abSpeciesROC$auc, 3)))
+
+rocAb %>%
+    mutate(cond = c(rep(roclabsAb[1], nrow(abPosROC$curve)),
+                    rep(roclabsAb[2], nrow(abNegROC$curve)),
+                    rep(roclabsAb[3], nrow(abSpeciesROC$curve)))) %>%
+    ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
+    geom_path(size = 1) + 
+    coolTheme +
+    theme(legend.position = c(0.05,0.05),
+          legend.justification = c(0,0),
+          legend.title = element_blank()) +
+    coord_equal() +
+    ggtitle("ROC")
+
+ggsave("../results/AbRocCurve.png", width = 3.5, height = 3.5)
+
+```
+
+### Klebsiella pneumoniae PR  & ROC Curves
+```{r, KpPR}
+# PR
+prnames <- c("Recall", "Precision", "threshold")
+prKp <- as.tibble(rbind(kpPosPR$curve, kpNegPR$curve, kpSpeciesPR$curve))
+names(prKp) <- prnames
+
+labsKp <- c(paste0("Resistant Kp, AUC = ", round(kpPosPR$auc.integral, 3)),
+            paste0("Susceptible Kp, AUC = ", round(kpNegPR$auc.integral, 3)),
+            paste0("Kp Species, AUC = ", round(kpSpeciesPR$auc.integral, 3)))
+
+prKp %>%
+    mutate(cond = c(rep(labsKp[1], nrow(kpPosPR$curve)),
+                    rep(labsKp[2], nrow(kpNegPR$curve)),
+                    rep(labsKp[3], nrow(kpSpeciesPR$curve)))) %>%
+    ggplot(aes(x = Recall, y = Precision, color = cond)) +
+    geom_path(size = 1) + 
+    coolTheme +
+    theme(legend.position = c(0.05,0.05),
+          legend.justification = c(0,0),
+          legend.title = element_blank()) +
+    coord_equal() +
+    ggtitle("Precision-Recall")
+
+ggsave("../results/KpPrCurve.png", width = 3.5, height = 3.5)
+
+# ROC
+rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
+rocKp <- as.tibble(rbind(kpPosROC$curve, kpNegROC$curve, kpSpeciesROC$curve))
+names(rocKp) <- rocnames
+
+roclabsKp <- c(paste0("Resistant Kp, AUC = ", round(kpPosROC$auc, 3)),
+               paste0("Susceptible Kp, AUC = ", round(kpNegROC$auc, 3)),
+               paste0("Kp Species, AUC = ", round(kpSpeciesROC$auc, 3)))
+
+rocKp %>%
+    mutate(cond = c(rep(roclabsKp[1], nrow(kpPosROC$curve)),
+                    rep(roclabsKp[2], nrow(kpNegROC$curve)),
+                    rep(roclabsKp[3], nrow(kpSpeciesROC$curve)))) %>%
+    ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
+    geom_path(size = 1) + 
+    coolTheme +
+    theme(legend.position = c(0.05,0.05),
+          legend.justification = c(0,0),
+          legend.title = element_blank()) +
+    coord_equal() +
+    ggtitle("ROC")
+
+ggsave("../results/kpRocCurve.png", width = 3.5, height = 3.5)
 
 ```
