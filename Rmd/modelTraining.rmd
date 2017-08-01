@@ -32,6 +32,8 @@ source("../R/prepareData.R")
 
 # for reproducibility
 set.seed(1832939)
+
+featTol <-  1.5
 ```
 
 
@@ -149,7 +151,7 @@ createFeatureTbl <- function(trainList, mzTol, testSet = F) {
 }
 
 trainDatList <- map(trainIdx, createFeatureTbl, 
-                    mzTol = 1,
+                    mzTol = featTol,
                     testSet = F)
 
 saveRDS(trainDatList, "../temp/trainDatList.rds")
@@ -239,7 +241,7 @@ saveRDS(mods, "../temp/finalModels.rds")
 # Prepare Test Set
 ```{r singles}
 testDatList <- map(trainIdx, createFeatureTbl, 
-                   mzTol = 1,
+                   mzTol = featTol,
                    testSet = T)
 
 saveRDS(testDatList, "../temp/testDatList.rds")
