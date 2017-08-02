@@ -25,9 +25,6 @@ source("../R/extract.R")
 source("../R/ggplotTheme.R")
 
 set.seed(6578548)  
-
-cl <- makeCluster(detectCores() - 1)       # For parallelization
-registerDoParallel(cl)
 ```
 
 # Get file info
@@ -37,7 +34,7 @@ files <- list.files("../data/fullLib",
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-#files <- sample(files, 100)
+files <- sample(files, 100)
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -72,7 +69,8 @@ selectLinearCombos <- function(n, info) {
   return(selected)
 }
 
-numSpecies <- rep(c(2:5), 3000)
+#numSpecies <- rep(c(2:5), 3000)
+numSpecies <- rep(5, 10)
 
 
 combos <- tibble(spec_id = as.factor(paste0("spec_", 1:length(numSpecies))),
@@ -132,11 +130,22 @@ f <- function(x, s) {
 }
 
 # makes the complex spectra... and takes a ton of memory
-comboSpec <- ddply(combos, "spec_id", f, spec,
-                   .parallel = T,
-                   .paropts = list(
-                     .packages = c("dplyr", "MALDIquant", "stringr"),
-                     .export = c("makeComplexSpec", "extractSpectra")))
+# tictoc::tic()
+# comboSpec <- ddply(combos, "spec_id", f, spec,
+#                    .parallel = T,
+#                    .paropts = list(
+#                      .packages = c("dplyr", "MALDIquant", "stringr"),
+#                      .export = c("makeComplexSpec", "extractSpectra")))
+# t1 <- tictoc::toc()
+# t1 <- t1$toc - t1$tic
+
+t2 <- tictoc::tic()
+comboSpec2 <- combos %>% 
+    group_by(spec_id) %>%
+    left_join(spec) %>%
+    do(makeComplexSpec(.))
+t2 <- tictoc::toc()
+t2 <- t2$toc - t2$tic
 
 saveRDS(comboSpec, "../temp/comboSpec.RDS")
 
