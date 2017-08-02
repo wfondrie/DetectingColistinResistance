@@ -118,7 +118,7 @@ makeComplexSpec <- function(specInfo, specDf) {
         group_by(spec_id) %>%
         do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum"))
     
-    newSpec <- extractSpectra(cmb$massSpecObj[[1]])
+    newSpec <- extractSpectra(specInfo$massSpecObj[[1]])
     return(newSpec)
 }
 
