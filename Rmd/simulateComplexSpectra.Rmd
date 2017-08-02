@@ -25,9 +25,6 @@ source("../R/extract.R")
 source("../R/ggplotTheme.R")
 
 set.seed(6578548)  
-
-cl <- makeCluster(detectCores() - 1)       # For parallelization
-registerDoParallel(cl)
 ```
 
 # Get file info
@@ -42,7 +39,7 @@ files <- list.files("../data/fullLib",
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
            id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
-           species = str_match(type, "^[^ ]+ [^ ]+"),
+           species = str_match(type, "^[^ ]+ [^ ]+")[ , 1],
            Ab = ifelse(str_detect(type, "Acinetobacter baumannii - res"), "pos", "other"),
            Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), "pos", "other"),
            Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
@@ -72,7 +69,7 @@ selectLinearCombos <- function(n, info) {
   return(selected)
 }
 
-numSpecies <- rep(c(2:5), 3000)
+numSpecies <- rep(c(1:5), 2000)
 
 
 combos <- tibble(spec_id = as.factor(paste0("spec_", 1:length(numSpecies))),
@@ -91,15 +88,15 @@ comboSummary <- combos %>%
 
 summary(comboSummary)
 
-saveRDS(comboSummary, file = "../temp/complexSpectraSummary.RDS")
-saveRDS(combos, file = "../temp/complexComponents.RDS")
+saveRDS(comboSummary, file = "../temp/complexSpectraSummary.rds")
+saveRDS(combos, file = "../temp/complexComponents.rds")
 ```
 
 # Create Complex Spectra from Selections And Extract Features
 
 ```{r createSpectra}
 # list of features, created in rmd/modelTraining.rmd
-features <- readRDS("../temp/features.RDS")
+features <- readRDS("../temp/features.rds")
 
 specList <- preProcessSpec(files, hws = 80) # Same preprocessing
 
@@ -131,6 +128,9 @@ f <- function(x, s) {
     do(makeComplexSpec(.))
 }
 
+cl <- makeCluster(8)       # For parallelization
+registerDoParallel(cl)
+
 # makes the complex spectra... and takes a ton of memory
 comboSpec <- ddply(combos, "spec_id", f, spec,
                    .parallel = T,
@@ -138,14 +138,16 @@ comboSpec <- ddply(combos, "spec_id", f, spec,
                      .packages = c("dplyr", "MALDIquant", "stringr"),
                      .export = c("makeComplexSpec", "extractSpectra")))
 
-saveRDS(comboSpec, "../temp/comboSpec.RDS")
+saveRDS(comboSpec, "../temp/comboSpec.rds")
+
+stopCluster(cl)
 
 # extract features for prediction
 feattbl <- comboSpec %>%
   group_by(id) %>%
-  do(extractFeatures(., featureVec = unique(features$mz), tol = 1))
+  do(extractFeatures(., featureVec = unique(features$mz), tol = 1.5))
 
-saveRDS(feattbl, "../temp/comboFeatTbl.RDS")
+saveRDS(feattbl, "../temp/comboFeatTbl.rds")
 
 mlFeat <- feattbl %>%
   select(id, feat, relInt) %>%
@@ -155,7 +157,7 @@ mlFeat <- feattbl %>%
   spread(key = feat, value = relInt, fill = 0) %>%
   left_join(comboSummary, by = c("id" = "spec_id")) 
 
-saveRDS(mlFeat, file = "../temp/complexFeatures.RDS")
+saveRDS(mlFeat, file = "../temp/complexFeatures.rds")
 ```
 
 
