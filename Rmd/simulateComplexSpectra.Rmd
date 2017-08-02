@@ -34,7 +34,7 @@ files <- list.files("../data/fullLib",
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-#files <- sample(files, 100)
+files <- sample(files, 100)
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -128,15 +128,26 @@ f <- function(x, s) {
     do(makeComplexSpec(.))
 }
 
-cl <- makeCluster(8)       # For parallelization
-registerDoParallel(cl)
+# cl <- makeCluster(8)       # For parallelization
+# registerDoParallel(cl)
 
 # makes the complex spectra... and takes a ton of memory
-comboSpec <- ddply(combos, "spec_id", f, spec,
-                   .parallel = T,
-                   .paropts = list(
-                     .packages = c("dplyr", "MALDIquant", "stringr"),
-                     .export = c("makeComplexSpec", "extractSpectra")))
+# tictoc::tic()
+# comboSpec <- ddply(combos, "spec_id", f, spec,
+#                    .parallel = T,
+#                    .paropts = list(
+#                      .packages = c("dplyr", "MALDIquant", "stringr"),
+#                      .export = c("makeComplexSpec", "extractSpectra")))
+# t1 <- tictoc::toc()
+# t1 <- t1$toc - t1$tic
+
+t2 <- tictoc::tic()
+comboSpec2 <- combos %>% 
+    group_by(spec_id) %>%
+    left_join(spec) %>%
+    do(makeComplexSpec(.))
+t2 <- tictoc::toc()
+t2 <- t2$toc - t2$tic
 
 saveRDS(comboSpec, "../temp/comboSpec.rds")
 
