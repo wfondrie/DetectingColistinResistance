@@ -34,7 +34,7 @@ files <- list.files("../data/fullLib",
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-files <- sample(files, 100)
+#files <- sample(files, 100)
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -108,8 +108,9 @@ spec <- map_df(specList, extractSpectra)
 
 # Main function to simulate complex spectra
 # - specInfo should contain the file names and coefficients for the constituents of each spectrum
-makeComplexSpec <- function(specInfo) {
-    cmb <- specInfo %>%
+makeComplexSpec <- function(specInfo, specDf) {
+    specInfo <- specInfo %>%
+        left_join(specDf) %>%
         group_by(spec_id, id, type) %>%
         do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
                                             metaData = 
@@ -144,8 +145,7 @@ f <- function(x, s) {
 t2 <- tictoc::tic()
 comboSpec2 <- combos %>% 
     group_by(spec_id) %>%
-    left_join(spec) %>%
-    do(makeComplexSpec(.))
+    do(makeComplexSpec(., spec))
 t2 <- tictoc::toc()
 t2 <- t2$toc - t2$tic
 
