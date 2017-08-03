@@ -1,16 +1,17 @@
 ---
-title: "R Notebook"
+title: "Training XGBoost Models"
 output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
 ```
 
-# Introduction
+# Introduction  
+This file contains the code used to build the XGBoost machine learning models presented in [Fondrie et al.]()  
 
-# Prepare Workspace
-```{r loadLibraries, results = "hide"}
+# Load Libraries & Prepare Workspace  
+```{r loadLibraries}
 # data manipulation
 library(tidyverse, quietly = T)
 library(stringr, quietly = T)
@@ -25,6 +26,10 @@ library(caret, quietly = T)
 library(PRROC, quietly = T)
 library(xgboost, quietly = T)
 
+# timing and session information
+library(tictoc)
+library(devtools)
+
 # import helper functions
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
@@ -32,18 +37,18 @@ source("../R/prepareData.R")
 
 # for reproducibility
 set.seed(1832939)
+tic()
 
-featTol <-  1.5
+featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
 ```
 
 
-# Partition Data
+# Partition Data  
 ```{r getFileInfo}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-#files <- sample(files, 200) # uncomment for testing
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -60,7 +65,7 @@ trainIdx <- list(Ab = list(idx = createDataPartition(specInfo$Ab, p = 0.6, list 
 
 ```
 
-# Select Features from Training Data
+# Select Features From Training Data  
 ```{r determineFeatures, cache = TRUE}
 determineFeatures <- function(trainList, n = 50) {
     
@@ -110,7 +115,7 @@ features <- unique(features)
 saveRDS(features, file = "../temp/features.RDS")
 ```
 
-# Extract features from Spectra
+# Extract features from Spectra  
 ```{r extractFeatures, cache = TRUE}
 createFeatureTbl <- function(trainList, mzTol, testSet = F) {
     idx <- if(testSet) -trainList$idx else trainList$idx
@@ -157,16 +162,16 @@ trainDatList <- map(trainIdx, createFeatureTbl,
 saveRDS(trainDatList, "../temp/trainDatList.rds")
 ```
 
-# Train the XGBoost tree models 
-## Prepare the Data
+# Train the XGBoost Tree Models 
+## Prepare the Data for Model Training  
 ```{r prepareData}
 dmatList <- prepareData(trainDatList, orgLabs = c("Ab", "Kp"))
 saveRDS(dmatList, "../temp/dmatList.rds")
 
 ```
 
-## Hyperparameter Tuning by Grid Search
-```{r xgboost_tune1, results = "hide"}
+## Tune Hyperparameter by Grid Search  
+```{r xgboost_tune1}
 paramGrid <- expand.grid(max_depth = seq(1, 10, by = 2),
                               min_child_weight = c(0, 1, 2, 3),
                               gamma = c(0, 0.01, 0.05, 0.1))
@@ -208,8 +213,8 @@ bstParams <- paramRes %>%
 
 ```
 
-## Model Refinement
-```{r refinement, results = "none"}
+## Refine Models
+```{r refinement}
 finalParams <- bstParams %>%
                 group_by(org) %>%
                 do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.01, verbose = T))
@@ -248,6 +253,8 @@ saveRDS(testDatList, "../temp/testDatList.rds")
 ```
 
 # Session Information
-```{r sessionInfo}
-devtools::session_info()
+```{r sessionInfo, results = "hold"}
+times <- toc()
+cat(c("Executions time:", round((times$toc - times$tic)/60, 0), "min"))
+session_info()
 ```

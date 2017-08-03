@@ -8,10 +8,11 @@ output: github_document
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
 ```
+
 # Introduction 
 This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~50 Gb of RAM to execute. The machine this was run on had 64 Gb of RAM and 2x AMD Opteron 6272 processors (2.10 GHz).  
 
-# Load Libraries  
+# Load Libraries & Prepare Workspace
 ```{r loadLibraries}
 library(tidyverse, quietly = T)
 library(MALDIquant, quietly = T)
@@ -26,15 +27,16 @@ source("../R/ggplotTheme.R")
 
 set.seed(6578548)
 tic()
+
+featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
 ```
 
-# Get file info  
+# Retrieve File Information  
 ```{r importSpectra}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-#files <- sample(files, 100)
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -118,7 +120,7 @@ makeComplexSpec <- function(specInfo, specDf) {
     return(newSpec)
 }
 
-# Takes ~1 hr
+# Takes ~30 min
 comboSpec <- combos %>% 
     group_by(spec_id) %>%
     left_join(spec) %>%
@@ -130,7 +132,7 @@ saveRDS(comboSpec, "../temp/comboSpec.rds")
 # extract features for prediction
 feattbl <- comboSpec %>%
   group_by(id) %>%
-  do(extractFeatures(., featureVec = unique(features$mz), tol = 1.5))
+  do(extractFeatures(., featureVec = unique(features$mz), tol = featTol))
 
 saveRDS(feattbl, "../temp/comboFeatTbl.rds")
 
@@ -147,10 +149,9 @@ saveRDS(mlFeat, file = "../temp/complexFeatures.rds")
 
 # Session Information  
 ```{r SessionInfo, results = "hold"}
-time <- toc()
-cat("Execution time:", time$toc - time$tic)
-
-devtools::session_info()
+times <- toc()
+cat(c("Executions time:", round((times$toc - times$tic)/60, 0), "min"))
+session_info()
 ```
 
 
