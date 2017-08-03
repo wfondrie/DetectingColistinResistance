@@ -6,29 +6,29 @@ output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
 ```
+# Introduction 
+This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~50 Gb of RAM to execute. The machine this was run on had 64 Gb of RAM and 2x AMD Opteron 6272 processors (2.10 GHz).  
 
-# Load Libraries
-
+# Load Libraries  
 ```{r loadLibraries}
-library(plyr, quietly = T)
 library(tidyverse, quietly = T)
 library(MALDIquant, quietly = T)
 library(MALDIquantForeign, quietly = T)
 library(stringr, quietly = T)
-library(doParallel, quietly = T)
 library(forcats, quietly = T)
+library(tictoc, quietly = T)
 
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
 source("../R/ggplotTheme.R")
 
-set.seed(6578548)  
+set.seed(6578548)
+tic()
 ```
 
-# Get file info
-
+# Get file info  
 ```{r importSpectra}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
@@ -49,9 +49,8 @@ summary(specInfo)
 
 ```
 
-# Select Linear Combinations
-
-```{r combinations}
+# Select Linear Combinations  
+```{r combinations, results = "hold"}
 selectLinearCombos <- function(n, info) {
   
   speciesSelect <- info %>%
@@ -64,13 +63,12 @@ selectLinearCombos <- function(n, info) {
     group_by(species) %>%
     sample_n(size = 1) %>%
     ungroup() %>%
-    mutate(coeff = runif(n, 0.1, 1))
+    mutate(coeff = runif(n, 0.1, 1)) # mixed with coefficients [0.1, 1]
   
   return(selected)
 }
 
-numSpecies <- rep(c(1:5), 2000)
-
+numSpecies <- rep(c(1:5), 1000) # number of spectra to simulate
 
 combos <- tibble(spec_id = as.factor(paste0("spec_", 1:length(numSpecies))),
                  comp = map(numSpecies, selectLinearCombos, info = specInfo)) %>%
@@ -86,14 +84,13 @@ comboSummary <- combos %>%
             AbPres = as.factor(ifelse(any(Ab == "neg"), "neg", AbPres)),
             KpPres = as.factor(ifelse(any(Kp == "neg"), "neg", KpPres)))
 
-summary(comboSummary)
-
 saveRDS(comboSummary, file = "../temp/complexSpectraSummary.rds")
 saveRDS(combos, file = "../temp/complexComponents.rds")
+
+summary(comboSummary)
 ```
 
-# Create Complex Spectra from Selections And Extract Features
-
+# Create Complex Spectra from Selections And Extract Features  
 ```{r createSpectra}
 # list of features, created in rmd/modelTraining.rmd
 features <- readRDS("../temp/features.rds")
@@ -110,7 +107,6 @@ spec <- map_df(specList, extractSpectra)
 # - specInfo should contain the file names and coefficients for the constituents of each spectrum
 makeComplexSpec <- function(specInfo, specDf) {
     specInfo <- specInfo %>%
-        left_join(specDf) %>%
         group_by(spec_id, id, type) %>%
         do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
                                             metaData = 
@@ -122,36 +118,14 @@ makeComplexSpec <- function(specInfo, specDf) {
     return(newSpec)
 }
 
-# helper function to loop over makeComplexSpec for each spectrum
-f <- function(x, s) {
-    x %>%
-    left_join(s) %>%
-    do(makeComplexSpec(.))
-}
-
-# cl <- makeCluster(8)       # For parallelization
-# registerDoParallel(cl)
-
-# makes the complex spectra... and takes a ton of memory
-# tictoc::tic()
-# comboSpec <- ddply(combos, "spec_id", f, spec,
-#                    .parallel = T,
-#                    .paropts = list(
-#                      .packages = c("dplyr", "MALDIquant", "stringr"),
-#                      .export = c("makeComplexSpec", "extractSpectra")))
-# t1 <- tictoc::toc()
-# t1 <- t1$toc - t1$tic
-
-t2 <- tictoc::tic()
-comboSpec2 <- combos %>% 
+# Takes ~1 hr
+comboSpec <- combos %>% 
     group_by(spec_id) %>%
+    left_join(spec) %>%
     do(makeComplexSpec(., spec))
-t2 <- tictoc::toc()
-t2 <- t2$toc - t2$tic
 
 saveRDS(comboSpec, "../temp/comboSpec.rds")
 
-stopCluster(cl)
 
 # extract features for prediction
 feattbl <- comboSpec %>%
@@ -171,8 +145,13 @@ mlFeat <- feattbl %>%
 saveRDS(mlFeat, file = "../temp/complexFeatures.rds")
 ```
 
+# Session Information  
+```{r SessionInfo, results = "hold"}
+time <- toc()
+cat("Execution time:", time$toc - time$tic)
 
-
+devtools::session_info()
+```
 
 
 
