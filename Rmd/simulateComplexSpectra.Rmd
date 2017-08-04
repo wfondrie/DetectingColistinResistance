@@ -57,13 +57,14 @@ summary(specInfo)
 selectLinearCombos <- function(n, info) {
     
     regex <- "(Acinetobacter baumannii|Klebsiella pneumoniae)"
+    pAbKp <- 0.3/n
     
     speciesSelect <- info %>%
         group_by(species) %>%
         summarize(num = length(id)) %>%
         mutate(weights = ifelse(str_detect(species, regex), 
-                                0.25, 
-                                0.75/(length(species)-2))) %>%
+                                pAbKp, 
+                                (1-2*pAbKp)/(length(species)-2))) %>%
         sample_n(size = n, weight = weights)
     
     selected <- speciesSelect %>%
@@ -97,6 +98,12 @@ saveRDS(comboSummary, file = "../temp/complexSpectraSummary.rds")
 saveRDS(combos, file = "../temp/complexComponents.rds")
 
 summary(comboSummary)
+
+comboSummary %>%
+    group_by(n) %>%
+    summarize(numAb = sum(AbPres != "other"),
+              numKp = sum(KpPres != "other"),
+              numOther = sum(AbPres == "other" & KpPres == "other"))
 ```
 
 # Create Complex Spectra from Selections And Extract Features  
