@@ -20,6 +20,7 @@ library(MALDIquantForeign, quietly = T)
 library(stringr, quietly = T)
 library(forcats, quietly = T)
 library(tictoc, quietly = T)
+library(devtools, quietly = T)
 
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
@@ -37,6 +38,7 @@ files <- list.files("../data/fullLib",
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
+#files <- sample(files, 100)
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -71,6 +73,7 @@ selectLinearCombos <- function(n, info) {
 }
 
 numSpecies <- rep(c(1:5), 1000) # number of spectra to simulate
+#numSpecies <- rep(c(1:5), 10) # number of spectra to simulate
 
 combos <- tibble(spec_id = as.factor(paste0("spec_", 1:length(numSpecies))),
                  comp = map(numSpecies, selectLinearCombos, info = specInfo)) %>%
@@ -107,7 +110,7 @@ spec <- map_df(specList, extractSpectra)
 
 # Main function to simulate complex spectra
 # - specInfo should contain the file names and coefficients for the constituents of each spectrum
-makeComplexSpec <- function(specInfo, specDf) {
+makeComplexSpec <- function(specInfo) {
     specInfo <- specInfo %>%
         group_by(spec_id, id, type) %>%
         do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
@@ -116,15 +119,22 @@ makeComplexSpec <- function(specInfo, specDf) {
         group_by(spec_id) %>%
         do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum"))
     
-    newSpec <- extractSpectra(specInfo$massSpecObj[[1]])
-    return(newSpec)
+    return(extractSpectra(specInfo$massSpecObj[[1]]))
 }
+
+gc() # garbage collection. Free as much memory as possible.
 
 # Takes ~30 min
 comboSpec <- combos %>% 
-    group_by(spec_id) %>%
     left_join(spec) %>%
-    do(makeComplexSpec(., spec))
+    group_by(spec_id) %>%
+    #do(makeComplexSpec(.))
+    group_by(spec_id, id, type) %>%
+    do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
+                                        metaData = list(file = paste0("/cmb/", .$spec_id[1], ".mzXML")))) %>%
+    group_by(spec_id) %>%
+    do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum")) %>%
+    do(extractSpectra(.$massSpecObj))
 
 saveRDS(comboSpec, "../temp/comboSpec.rds")
 
