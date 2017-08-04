@@ -3,7 +3,8 @@ title: "R Notebook"
 output: github_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide", fig.align = "center",
+                      fig.height = 3.5, fig.width = 3.5)
 ```
 
 ## Introduction 
@@ -61,11 +62,12 @@ formatResults <- function(model, dataList) {
 ```
 
 ### Acinetobacter baumannii
-```{r AbSingleSpec}
+```{r AbSingleSpec, results='markup'}
 abMod <- xgb.load(mods$Ab)
 abRes <- formatResults(abMod, testdmatList$Ab)
 
-confusionMatrix(data = abRes$pred, reference = abRes$truth, positive = "pos")
+abCm <- confusionMatrix(data = abRes$pred, reference = abRes$truth, positive = "pos")
+abCm
 
 # Ab PR curves
 abPosPR <- pr.curve(abRes$pos[abRes$truth == "pos"], 
@@ -89,11 +91,12 @@ abSpeciesROC <- roc.curve(abRes$speciesVsAll[abRes$truth != "other"],
 ```
 
 ### Klebsiella pneumoniae
-```{r KpSingleSpec}
+```{r KpSingleSpec, results="markup"}
 kpMod <- xgb.load(mods$Kp)
 kpRes <- formatResults(kpMod, testdmatList$Kp)
 
-confusionMatrix(data = kpRes$pred, reference = kpRes$truth, positive = "pos")
+kpCm <- confusionMatrix(data = kpRes$pred, reference = kpRes$truth, positive = "pos")
+kpCm
 
 # Kp PR curves
 kpPosPR <- pr.curve(kpRes$pos[kpRes$truth == "pos"], 
@@ -118,26 +121,28 @@ kpSpeciesROC <- roc.curve(kpRes$speciesVsAll[kpRes$truth != "other"],
 
 ### Plot PR and ROC Curves
 #### Acinetobacter PR  & ROC Curves
-```{r, AbPR}
+```{r, AbPR, results="hold", fig.show="hold"}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prAb <- as.tibble(rbind(abPosPR$curve, abNegPR$curve, abSpeciesPR$curve))
 names(prAb) <- prnames
 
-labsAb <- c(paste0("Resistant Ab, AUC = ", sigRound(abPosPR$auc.integral, 3)),
-            paste0("Susceptible Ab, AUC = ", sigRound(abNegPR$auc.integral, 3)),
-            paste0("Ab Species, AUC = ", sigRound(abSpeciesPR$auc.integral, 3)))
+labsAb <- c(paste0("Resistant, AUC = ", sigRound(abPosPR$auc.integral, 3)),
+            paste0("Susceptible, AUC = ", sigRound(abNegPR$auc.integral, 3)),
+            paste0("Species, AUC = ", sigRound(abSpeciesPR$auc.integral, 3)))
 
 AbPrCurve <- prAb %>%
     mutate(cond = c(rep(labsAb[1], nrow(abPosPR$curve)),
                     rep(labsAb[2], nrow(abNegPR$curve)),
-                    rep(labsAb[3], nrow(abSpeciesPR$curve)))) %>%
+                    rep(labsAb[3], nrow(abSpeciesPR$curve))),
+           cond = fct_rev(fct_relevel(as.factor(cond), labsAb))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
     geom_path(size = 1)  +
     coord_equal() +
     theme(legend.position = c(0.05,0.05),
           legend.justification = c(0,0),
-          legend.title = element_blank())
+          legend.title = element_blank()) +
+    ggtitle(expression(italic("A. baummannii")))
 
 AbPrCurve
 ggsave("../results/AbPrCurve.png", width = 3.5, height = 3.5)
@@ -147,20 +152,23 @@ rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
 rocAb <- as.tibble(rbind(abPosROC$curve, abNegROC$curve, abSpeciesROC$curve))
 names(rocAb) <- rocnames
 
-roclabsAb <- c(paste0("Resistant Ab, AUC = ", sigRound(abPosROC$auc, 3)),
-               paste0("Susceptible Ab, AUC = ", sigRound(abNegROC$auc, 3)),
-               paste0("Ab Species, AUC = ", sigRound(abSpeciesROC$auc, 3)))
+roclabsAb <- c(paste0("Resistant, AUC = ", sigRound(abPosROC$auc, 3)),
+               paste0("Susceptible, AUC = ", sigRound(abNegROC$auc, 3)),
+               paste0("Species, AUC = ", sigRound(abSpeciesROC$auc, 3)))
 
 AbRocCurve <- rocAb %>%
     mutate(cond = c(rep(roclabsAb[1], nrow(abPosROC$curve)),
                     rep(roclabsAb[2], nrow(abNegROC$curve)),
-                    rep(roclabsAb[3], nrow(abSpeciesROC$curve)))) %>%
+                    rep(roclabsAb[3], nrow(abSpeciesROC$curve))),
+           cond = fct_rev(fct_relevel(as.factor(cond), roclabsAb))) %>%
     ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
     geom_path(size = 1)  +
     coord_equal() +
     theme(legend.position = c(0.95,0.05),
           legend.justification = c(1,0),
-          legend.title = element_blank())
+          legend.title = element_blank()) +
+    ggtitle(expression(italic("A. baummannii")))
+
 AbRocCurve
 ggsave("../results/AbRocCurve.png", width = 3.5, height = 3.5)
 
@@ -168,26 +176,29 @@ ggsave("../results/AbRocCurve.png", width = 3.5, height = 3.5)
 ```
 
 #### Klebsiella pneumoniae PR  & ROC Curves
-```{r, KpPR}
+```{r, KpPR, results = "hold", fig.show = "hold"}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prKp <- as.tibble(rbind(kpPosPR$curve, kpNegPR$curve, kpSpeciesPR$curve))
 names(prKp) <- prnames
 
-labsKp <- c(paste0("Resistant Kp, AUC = ", sigRound(kpPosPR$auc.integral, 3)),
-            paste0("Susceptible Kp, AUC = ", sigRound(kpNegPR$auc.integral, 3)),
-            paste0("Kp Species, AUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
+labsKp <- c(paste0("Resistant, AUC = ", sigRound(kpPosPR$auc.integral, 3)),
+            paste0("Susceptible, AUC = ", sigRound(kpNegPR$auc.integral, 3)),
+            paste0("Species, AUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
 
 KpPrCurve <- prKp %>%
     mutate(cond = c(rep(labsKp[1], nrow(kpPosPR$curve)),
                     rep(labsKp[2], nrow(kpNegPR$curve)),
-                    rep(labsKp[3], nrow(kpSpeciesPR$curve)))) %>%
+                    rep(labsKp[3], nrow(kpSpeciesPR$curve))),
+           cond = fct_rev(fct_relevel(as.factor(cond), labsKp))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
     geom_path(size = 1)  +
     coord_equal() +
     theme(legend.position = c(0.05,0.05),
           legend.justification = c(0,0),
-          legend.title = element_blank())
+          legend.title = element_blank()) +
+    ggtitle(expression(italic("K. pneumoniae")))
+
 KpPrCurve
 
 ggsave("../results/KpPrCurve.png", width = 3.5, height = 3.5)
@@ -197,20 +208,23 @@ rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
 rocKp <- as.tibble(rbind(kpPosROC$curve, kpNegROC$curve, kpSpeciesROC$curve))
 names(rocKp) <- rocnames
 
-roclabsKp <- c(paste0("Resistant Kp,AUC = ", sigRound(kpPosROC$auc, 3)),
-               paste0("Susceptible Kp,AUC = ", sigRound(kpNegROC$auc, 3)),
-               paste0("Kp Species, AUC = ", sigRound(kpSpeciesROC$auc, 3)))
+roclabsKp <- c(paste0("Resistant,AUC = ", sigRound(kpPosROC$auc, 3)),
+               paste0("Susceptible,AUC = ", sigRound(kpNegROC$auc, 3)),
+               paste0("Species, AUC = ", sigRound(kpSpeciesROC$auc, 3)))
 
 KpRocCurve <- rocKp %>%
     mutate(cond = c(rep(roclabsKp[1], nrow(kpPosROC$curve)),
                     rep(roclabsKp[2], nrow(kpNegROC$curve)),
-                    rep(roclabsKp[3], nrow(kpSpeciesROC$curve)))) %>%
+                    rep(roclabsKp[3], nrow(kpSpeciesROC$curve))),
+           cond = fct_rev(fct_relevel(as.factor(cond), roclabsKp))) %>%
     ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
     geom_path(size = 1) +
     coord_equal() + 
     theme(legend.position = c(0.95,0.05),
           legend.justification = c(1,0),
-          legend.title = element_blank())
+          legend.title = element_blank())  +
+    ggtitle(expression(italic("K. pneumoniae")))
+
 KpRocCurve
 ggsave("../results/KpRocCurve.png", width = 3.5, height = 3.5)
 
@@ -219,7 +233,7 @@ save(AbPrCurve, AbRocCurve, KpPrCurve, KpRocCurve, file = "../temp/curves.rda")
 ```
 
 ## Variable Importance
-```{r varImp}
+```{r varImp, results = "hold", fig.show = "hold", fig.width = 4}
 vImpAb <- xgb.importance(colnames(testdmatList$Ab$dat), model = abMod) %>%
     mutate(org = "Ab")
 
@@ -253,7 +267,8 @@ vImpAbPlot <- vImp %>%
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
           legend.position = c(0.95, 0.95),
           legend.justification = c(1, 1),
-          legend.title = element_blank())
+          legend.title = element_blank()) +
+    ggtitle(expression(italic("A. baummannii")))
 
 vImpAbPlot
 ggsave("../results/vImpAbPlot.png", height = 3, width = 4)
@@ -269,13 +284,23 @@ vImpKpPlot <- vImp %>%
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
           legend.position = c(0.95, 0.95),
           legend.justification = c(1, 1),
-          legend.title = element_blank())
+          legend.title = element_blank()) +
+    ggtitle(expression(italic("K. pneumoniae")))
 
 vImpKpPlot
 ggsave("../results/vImpKpPlot.png", height = 3, width = 4)
 
 # save for later
 save(vImpAbPlot, vImpKpPlot, file = "../temp/vImpPlots.rda")
+
+```
+
+## Determine How Spectra Are Misclassified
+```{r misclassified}
+abCmTable <- as.tibble(abCm$table) %>% mutate(species = "Ab")
+kpCmTable <- as.tibble(kpCm$table) %>% mutate(species = "Kp")
+
+cmTable <- abCmTable %>% full_join(kpCmTable)
 
 ```
 
