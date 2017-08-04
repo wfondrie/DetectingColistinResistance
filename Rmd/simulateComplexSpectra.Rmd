@@ -38,7 +38,6 @@ files <- list.files("../data/fullLib",
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-#files <- sample(files, 100)
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -56,20 +55,25 @@ summary(specInfo)
 # Select Linear Combinations  
 ```{r combinations, results = "hold"}
 selectLinearCombos <- function(n, info) {
-  
-  speciesSelect <- info %>%
-    group_by(species) %>%
-    summarize(num = length(id)) %>%
-    sample_n(size = n)
-  
-  selected <- speciesSelect %>%
-    left_join(info) %>%
-    group_by(species) %>%
-    sample_n(size = 1) %>%
-    ungroup() %>%
-    mutate(coeff = runif(n, 0.1, 1)) # mixed with coefficients [0.1, 1]
-  
-  return(selected)
+    
+    regex <- "(Acinetobacter baumannii|Klebsiella pneumoniae)"
+    
+    speciesSelect <- info %>%
+        group_by(species) %>%
+        summarize(num = length(id)) %>%
+        mutate(weights = ifelse(str_detect(species, regex), 
+                                0.25, 
+                                0.75/(length(species)-2))) %>%
+        sample_n(size = n, weight = weights)
+    
+    selected <- speciesSelect %>%
+        left_join(info) %>%
+        group_by(species) %>%
+        sample_n(size = 1) %>%
+        ungroup() %>%
+        mutate(coeff = c(1, runif(n-1, 0.1, 1))) # mixed with coefficients [0.1, 1]
+    
+    return(selected)
 }
 
 numSpecies <- rep(c(1:5), 1000) # number of spectra to simulate
@@ -77,17 +81,17 @@ numSpecies <- rep(c(1:5), 1000) # number of spectra to simulate
 
 combos <- tibble(spec_id = as.factor(paste0("spec_", 1:length(numSpecies))),
                  comp = map(numSpecies, selectLinearCombos, info = specInfo)) %>%
-  unnest()
+    unnest()
 
 comboSummary <- combos %>%
-  group_by(spec_id) %>%
-  summarize(n = length(id),
-            AbCoeff = ifelse(any(Ab != "other"), coeff[Ab != "other"] / max(coeff), 0),
-            KpCoeff = ifelse(any(Kp != "other"), coeff[Kp != "other"] / max(coeff), 0),
-            AbPres = ifelse(any(Ab == "pos"), "pos", "other"),
-            KpPres = ifelse(any(Kp == "pos"), "pos", "other"),
-            AbPres = as.factor(ifelse(any(Ab == "neg"), "neg", AbPres)),
-            KpPres = as.factor(ifelse(any(Kp == "neg"), "neg", KpPres)))
+    group_by(spec_id) %>%
+    summarize(n = length(id),
+              AbCoeff = ifelse(any(Ab != "other"), coeff[Ab != "other"] / max(coeff), 0),
+              KpCoeff = ifelse(any(Kp != "other"), coeff[Kp != "other"] / max(coeff), 0),
+              AbPres = ifelse(any(Ab == "pos"), "pos", "other"),
+              KpPres = ifelse(any(Kp == "pos"), "pos", "other"),
+              AbPres = as.factor(ifelse(any(Ab == "neg"), "neg", AbPres)),
+              KpPres = as.factor(ifelse(any(Kp == "neg"), "neg", KpPres)))
 
 saveRDS(comboSummary, file = "../temp/complexSpectraSummary.rds")
 saveRDS(combos, file = "../temp/complexComponents.rds")
@@ -141,18 +145,18 @@ saveRDS(comboSpec, "../temp/comboSpec.rds")
 
 # extract features for prediction
 feattbl <- comboSpec %>%
-  group_by(id) %>%
-  do(extractFeatures(., featureVec = unique(features$mz), tol = featTol))
+    group_by(id) %>%
+    do(extractFeatures(., featureVec = unique(features$mz), tol = featTol))
 
 saveRDS(feattbl, "../temp/comboFeatTbl.rds")
 
 mlFeat <- feattbl %>%
-  select(id, feat, relInt) %>%
-  group_by(id) %>%
-  mutate(relInt = relInt / max(relInt)) %>%
-  ungroup() %>%
-  spread(key = feat, value = relInt, fill = 0) %>%
-  left_join(comboSummary, by = c("id" = "spec_id")) 
+    select(id, feat, relInt) %>%
+    group_by(id) %>%
+    mutate(relInt = relInt / max(relInt)) %>%
+    ungroup() %>%
+    spread(key = feat, value = relInt, fill = 0) %>%
+    left_join(comboSummary, by = c("id" = "spec_id")) 
 
 saveRDS(mlFeat, file = "../temp/complexFeatures.rds")
 ```
