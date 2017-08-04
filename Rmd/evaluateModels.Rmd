@@ -2,30 +2,37 @@
 title: "R Notebook"
 output: github_document
 ---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
+```
 
-# Prepare Workspace
+## Introduction 
+
+## Load Libraries & Prepare Workspace
 ```{r loadLibraries, results = "hide"}
 # data manipulation
 library(tidyverse, quietly = T)
 library(stringr, quietly = T)
 library(forcats, quietly = T)
 
-# machine learning
+# machine learning tools
 library(PRROC, quietly = T)
 library(caret, quietly = T)
 library(xgboost, quietly = T)
 
 # ggplot2 theme
 source("../R/ggplotTheme.R")
+theme_set(coolTheme)
 
-# help function
+# other functions
 source("../R/prepareData.R")
+source("../R/utilityFunctions.R")
 
 # for reproducibility
 set.seed(0847532)
 ```
 
-# Single species spectra
+## Evaluation of Model Performance on Isolate Spectra in Library
 ```{r singles}
 testList <- readRDS("../temp/testDatList.rds")
 testdmatList <- prepareData(testList, orgLabs = c("Ab", "Kp"))
@@ -53,7 +60,7 @@ formatResults <- function(model, dataList) {
 
 ```
 
-## Acinetobacter baumannii
+### Acinetobacter baumannii
 ```{r AbSingleSpec}
 abMod <- xgb.load(mods$Ab)
 abRes <- formatResults(abMod, testdmatList$Ab)
@@ -81,7 +88,7 @@ abSpeciesROC <- roc.curve(abRes$speciesVsAll[abRes$truth != "other"],
                         abRes$speciesVsAll[abRes$truth ==  "other"], curve = T)
 ```
 
-## Klebsiella pneumoniae
+### Klebsiella pneumoniae
 ```{r KpSingleSpec}
 kpMod <- xgb.load(mods$Kp)
 kpRes <- formatResults(kpMod, testdmatList$Kp)
@@ -109,31 +116,30 @@ kpSpeciesROC <- roc.curve(kpRes$speciesVsAll[kpRes$truth != "other"],
                         kpRes$speciesVsAll[kpRes$truth ==  "other"], curve = T)
 ```
 
-## Plot PR and ROC Curves
-### Acinetobacter PR  & ROC Curves
+### Plot PR and ROC Curves
+#### Acinetobacter PR  & ROC Curves
 ```{r, AbPR}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prAb <- as.tibble(rbind(abPosPR$curve, abNegPR$curve, abSpeciesPR$curve))
 names(prAb) <- prnames
 
-labsAb <- c(paste0("Resistant Ab, AUC = ", round(abPosPR$auc.integral, 3)),
-            paste0("Susceptible Ab, AUC = ", round(abNegPR$auc.integral, 3)),
-            paste0("Ab Species, AUC = ", round(abSpeciesPR$auc.integral, 3)))
+labsAb <- c(paste0("Resistant Ab, AUC = ", sigRound(abPosPR$auc.integral, 3)),
+            paste0("Susceptible Ab, AUC = ", sigRound(abNegPR$auc.integral, 3)),
+            paste0("Ab Species, AUC = ", sigRound(abSpeciesPR$auc.integral, 3)))
 
-prAb %>%
+AbPrCurve <- prAb %>%
     mutate(cond = c(rep(labsAb[1], nrow(abPosPR$curve)),
                     rep(labsAb[2], nrow(abNegPR$curve)),
                     rep(labsAb[3], nrow(abSpeciesPR$curve)))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
-    geom_path(size = 1) + 
-    coolTheme +
+    geom_path(size = 1)  +
+    coord_equal() +
     theme(legend.position = c(0.05,0.05),
           legend.justification = c(0,0),
-          legend.title = element_blank()) +
-    coord_equal() +
-    ggtitle("Precision-Recall")
+          legend.title = element_blank())
 
+AbPrCurve
 ggsave("../results/AbPrCurve.png", width = 3.5, height = 3.5)
 
 # ROC
@@ -141,50 +147,48 @@ rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
 rocAb <- as.tibble(rbind(abPosROC$curve, abNegROC$curve, abSpeciesROC$curve))
 names(rocAb) <- rocnames
 
-roclabsAb <- c(paste0("Resistant Ab, AUC = ", round(abPosROC$auc, 3)),
-               paste0("Susceptible Ab, AUC = ", round(abNegROC$auc, 3)),
-               paste0("Ab Species, AUC = ", round(abSpeciesROC$auc, 3)))
+roclabsAb <- c(paste0("Resistant Ab, AUC = ", sigRound(abPosROC$auc, 3)),
+               paste0("Susceptible Ab, AUC = ", sigRound(abNegROC$auc, 3)),
+               paste0("Ab Species, AUC = ", sigRound(abSpeciesROC$auc, 3)))
 
-rocAb %>%
+AbRocCurve <- rocAb %>%
     mutate(cond = c(rep(roclabsAb[1], nrow(abPosROC$curve)),
                     rep(roclabsAb[2], nrow(abNegROC$curve)),
                     rep(roclabsAb[3], nrow(abSpeciesROC$curve)))) %>%
     ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
-    geom_path(size = 1) + 
-    coolTheme +
-    theme(legend.position = c(0.05,0.05),
-          legend.justification = c(0,0),
-          legend.title = element_blank()) +
+    geom_path(size = 1)  +
     coord_equal() +
-    ggtitle("ROC")
-
+    theme(legend.position = c(0.95,0.05),
+          legend.justification = c(1,0),
+          legend.title = element_blank())
+AbRocCurve
 ggsave("../results/AbRocCurve.png", width = 3.5, height = 3.5)
+
 
 ```
 
-### Klebsiella pneumoniae PR  & ROC Curves
+#### Klebsiella pneumoniae PR  & ROC Curves
 ```{r, KpPR}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prKp <- as.tibble(rbind(kpPosPR$curve, kpNegPR$curve, kpSpeciesPR$curve))
 names(prKp) <- prnames
 
-labsKp <- c(paste0("Resistant Kp, AUC = ", round(kpPosPR$auc.integral, 3)),
-            paste0("Susceptible Kp, AUC = ", round(kpNegPR$auc.integral, 3)),
-            paste0("Kp Species, AUC = ", round(kpSpeciesPR$auc.integral, 3)))
+labsKp <- c(paste0("Resistant Kp, AUC = ", sigRound(kpPosPR$auc.integral, 3)),
+            paste0("Susceptible Kp, AUC = ", sigRound(kpNegPR$auc.integral, 3)),
+            paste0("Kp Species, AUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
 
-prKp %>%
+KpPrCurve <- prKp %>%
     mutate(cond = c(rep(labsKp[1], nrow(kpPosPR$curve)),
                     rep(labsKp[2], nrow(kpNegPR$curve)),
                     rep(labsKp[3], nrow(kpSpeciesPR$curve)))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
-    geom_path(size = 1) + 
-    coolTheme +
+    geom_path(size = 1)  +
+    coord_equal() +
     theme(legend.position = c(0.05,0.05),
           legend.justification = c(0,0),
-          legend.title = element_blank()) +
-    coord_equal() +
-    ggtitle("Precision-Recall")
+          legend.title = element_blank())
+KpPrCurve
 
 ggsave("../results/KpPrCurve.png", width = 3.5, height = 3.5)
 
@@ -193,23 +197,85 @@ rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
 rocKp <- as.tibble(rbind(kpPosROC$curve, kpNegROC$curve, kpSpeciesROC$curve))
 names(rocKp) <- rocnames
 
-roclabsKp <- c(paste0("Resistant Kp, AUC = ", round(kpPosROC$auc, 3)),
-               paste0("Susceptible Kp, AUC = ", round(kpNegROC$auc, 3)),
-               paste0("Kp Species, AUC = ", round(kpSpeciesROC$auc, 3)))
+roclabsKp <- c(paste0("Resistant Kp,AUC = ", sigRound(kpPosROC$auc, 3)),
+               paste0("Susceptible Kp,AUC = ", sigRound(kpNegROC$auc, 3)),
+               paste0("Kp Species, AUC = ", sigRound(kpSpeciesROC$auc, 3)))
 
-rocKp %>%
+KpRocCurve <- rocKp %>%
     mutate(cond = c(rep(roclabsKp[1], nrow(kpPosROC$curve)),
                     rep(roclabsKp[2], nrow(kpNegROC$curve)),
                     rep(roclabsKp[3], nrow(kpSpeciesROC$curve)))) %>%
     ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
-    geom_path(size = 1) + 
-    coolTheme +
-    theme(legend.position = c(0.05,0.05),
-          legend.justification = c(0,0),
-          legend.title = element_blank()) +
-    coord_equal() +
-    ggtitle("ROC")
+    geom_path(size = 1) +
+    coord_equal() + 
+    theme(legend.position = c(0.95,0.05),
+          legend.justification = c(1,0),
+          legend.title = element_blank())
+KpRocCurve
+ggsave("../results/KpRocCurve.png", width = 3.5, height = 3.5)
 
-ggsave("../results/kpRocCurve.png", width = 3.5, height = 3.5)
+# save plots for later use:
+save(AbPrCurve, AbRocCurve, KpPrCurve, KpRocCurve, file = "../temp/curves.rda")
+```
+
+## Variable Importance
+```{r varImp}
+vImpAb <- xgb.importance(colnames(testdmatList$Ab$dat), model = abMod) %>%
+    mutate(org = "Ab")
+
+vImpKp <- xgb.importance(colnames(testdmatList$Kp$dat), model = kpMod) %>%
+    mutate(org = "Kp")
+
+basePeaks <- c("1912.5448", # Ab
+               "1841.4497")
+resPeaks <- c("2036.4927", # Ab
+              "1957.1088", # Kp
+              "1973.1961")
+
+vImp <- vImpAb %>%
+    full_join(vImpKp) %>%
+    mutate(featureMz = as.factor(str_replace(Feature, "mz", "")),
+           featureMz = fct_reorder(featureMz, Gain, .desc = T),
+           color = ifelse(featureMz %in% basePeaks, "Known Base Lipid A Structure", NA),
+           color = ifelse(featureMz %in% resPeaks, "Known Resistance Lipid A Structure", color)) %>%
+    group_by(org) %>%
+    arrange(desc(Gain)) %>%
+    filter(Gain >= Gain[20])
+
+# Acinetobacter
+vImpAbPlot <- vImp %>%
+    filter(org == "Ab") %>%
+    ggplot(aes(x = featureMz, y = Gain, ymax = Gain, ymin = 0)) +
+    geom_linerange(size = 1) +
+    geom_point(size = 2, aes(color = color)) +
+    xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
+    scale_color_discrete(breaks = c("Known Base Lipid A Structure", "Known Resistance Lipid A Structure")) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          legend.position = c(0.95, 0.95),
+          legend.justification = c(1, 1),
+          legend.title = element_blank())
+
+vImpAbPlot
+ggsave("../results/vImpAbPlot.png", height = 3, width = 4)
+
+# Klebsiella
+vImpKpPlot <- vImp %>%
+    filter(org == "Kp") %>%
+    ggplot(aes(x = featureMz, y = Gain, ymax = Gain, ymin = 0)) +
+    geom_linerange(size = 1) +
+    geom_point(size = 2, aes(color = color)) +
+    xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
+    scale_color_discrete(breaks = c("Known Base Lipid A Structure", "Known Resistance Lipid A Structure")) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          legend.position = c(0.95, 0.95),
+          legend.justification = c(1, 1),
+          legend.title = element_blank())
+
+vImpKpPlot
+ggsave("../results/vImpKpPlot.png", height = 3, width = 4)
+
+# save for later
+save(vImpAbPlot, vImpKpPlot, file = "../temp/vImpPlots.rda")
 
 ```
+
