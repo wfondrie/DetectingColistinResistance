@@ -38,10 +38,7 @@ set.seed(0847532)
 testList <- readRDS("../temp/testDatList.rds")
 testdmatList <- prepareData(testList, orgLabs = c("Ab", "Kp"))
 
-
 mods <- readRDS("../temp/finalModels.rds")
-
-
 
 formatResults <- function(model, dataList) {
     results <- as.data.frame(predict(model, dataList$dat, reshape = T))
