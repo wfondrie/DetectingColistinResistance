@@ -38,6 +38,7 @@ files <- list.files("../data/fullLib",
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
+#files <- sample(files, 50)
 
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
@@ -78,11 +79,13 @@ selectLinearCombos <- function(n, info) {
 }
 
 numSpecies <- rep(c(1:5), 1000) # number of spectra to simulate
-#numSpecies <- rep(c(1:5), 10) # number of spectra to simulate
+#numSpecies <- rep(c(1:5), 1) # test line
 
 combos <- tibble(spec_id = as.factor(paste0("spec_", 1:length(numSpecies))),
                  comp = map(numSpecies, selectLinearCombos, info = specInfo)) %>%
     unnest()
+
+fctOrder <- c("neg", "other", "pos")
 
 comboSummary <- combos %>%
     group_by(spec_id) %>%
@@ -92,7 +95,10 @@ comboSummary <- combos %>%
               AbPres = ifelse(any(Ab == "pos"), "pos", "other"),
               KpPres = ifelse(any(Kp == "pos"), "pos", "other"),
               AbPres = as.factor(ifelse(any(Ab == "neg"), "neg", AbPres)),
-              KpPres = as.factor(ifelse(any(Kp == "neg"), "neg", KpPres)))
+              KpPres = as.factor(ifelse(any(Kp == "neg"), "neg", KpPres))) %>%
+    rename(Ab = AbPres, Kp = KpPres) %>%
+    mutate(Ab = fct_relevel(Ab, fctOrder),
+           Kp = fct_relevel(Kp, fctOrder))
 
 saveRDS(comboSummary, file = "../temp/complexSpectraSummary.rds")
 saveRDS(combos, file = "../temp/complexComponents.rds")
@@ -119,27 +125,12 @@ specList <- specList[!multiSpecIdx]
 
 spec <- map_df(specList, extractSpectra)
 
-# Main function to simulate complex spectra
-# - specInfo should contain the file names and coefficients for the constituents of each spectrum
-makeComplexSpec <- function(specInfo) {
-    specInfo <- specInfo %>%
-        group_by(spec_id, id, type) %>%
-        do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
-                                            metaData = 
-                                                list(file = paste0("/cmb/", .$spec_id[1], ".mzXML")))) %>%
-        group_by(spec_id) %>%
-        do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum"))
-    
-    return(extractSpectra(specInfo$massSpecObj[[1]]))
-}
-
 gc() # garbage collection. Free as much memory as possible.
 
 # Takes ~30 min
 comboSpec <- combos %>% 
     left_join(spec) %>%
     group_by(spec_id) %>%
-    #do(makeComplexSpec(.))
     group_by(spec_id, id, type) %>%
     do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
                                         metaData = list(file = paste0("/cmb/", .$spec_id[1], ".mzXML")))) %>%
@@ -149,23 +140,40 @@ comboSpec <- combos %>%
 
 saveRDS(comboSpec, "../temp/comboSpec.rds")
 
+trainIdx <- readRDS("../temp/trainIdx.rds")
+
+# comboSummary <- readRDS("../temp.remote/complexSpectraSummary.rds")
+# comboSpec <- readRDS("../temp.remote/comboSpec.rds")
+
+createMixtureFeatureTbl <- function(trainList, specDf, summaryDat, mzTol) {
+    suffix <- if(str_detect(trainList$regex, "Acineto")) "_Ab" else "_Kp"
+    
+    # extract specified features
+    cat(paste0("Creating features for ", suffix, "...\n"))
+    feattbl <- specDf %>%
+      group_by(id) %>%
+      do(extractFeatures(., featureVec = trainList$features, tol = mzTol))
+    
+    saveRDS(feattbl, file = paste0("../temp/mixtureFeatureInfo", suffix, ".rds"))
+    
+    mlFeat <- feattbl %>%
+        select(id, feat, relInt) %>%
+        group_by(id) %>%
+        mutate(relInt = relInt / max(relInt)) %>%
+        ungroup() %>%
+        spread(key = feat, value = relInt, fill = 0) %>%
+        left_join(summaryDat, by = c("id" = "spec_id")) 
+    
+    return(mlFeat)
+}
 
 # extract features for prediction
-feattbl <- comboSpec %>%
-    group_by(id) %>%
-    do(extractFeatures(., featureVec = unique(features$mz), tol = featTol))
+mixtureDatList <- map(trainIdx,createMixtureFeatureTbl, 
+                      specDf = comboSpec,
+                      summaryDat = comboSummary,
+                      mzTol = featTol)
 
-saveRDS(feattbl, "../temp/comboFeatTbl.rds")
-
-mlFeat <- feattbl %>%
-    select(id, feat, relInt) %>%
-    group_by(id) %>%
-    mutate(relInt = relInt / max(relInt)) %>%
-    ungroup() %>%
-    spread(key = feat, value = relInt, fill = 0) %>%
-    left_join(comboSummary, by = c("id" = "spec_id")) 
-
-saveRDS(mlFeat, file = "../temp/complexFeatures.rds")
+saveRDS(mixtureDatList, file = "../temp/mixtureDatList.rds")
 ```
 
 # Session Information  
