@@ -171,7 +171,9 @@ saveRDS(mlFeat, file = "../temp/complexFeatures.rds")
 # Session Information  
 ```{r SessionInfo, results = "hold"}
 times <- toc()
-cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min"))
+
+cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))
+
 session_info()
 ```
 
