@@ -301,3 +301,41 @@ cmTable <- abCmTable %>% full_join(kpCmTable)
 
 ```
 
+## Performance on Simulated Mixture Spectra
+```{r, loadMixtureData}
+# complex spectra summary
+mixedSumm <- readRDS("../temp/complexSpectraSummary.rds")
+mixedComponents <- readRDS("../temp/complexComponents.rds")
+
+
+mixedList <- readRDS("../temp/mixtureDatList.rds")
+
+# formate simulated spectra like test set data
+mixedDf <- readRDS("../temp/complexFeatures.rds") %>%
+    rename(Ab = AbPres, Kp = KpPres) %>%
+    mutate(Ab = fct_relevel(Ab, fctOrder),
+           Kp = fct_relevel(Kp, fctOrder))
+
+mixedAb <- mixedDf %>% select(Ab, starts_with("mz"))
+mixedKp <- mixedDf %>% select(Kp, starts_with("mz"))
+
+mixedList <- list(Ab = mixedAb, Kp = mixedKp)
+mixedDmatList <- prepareData(mixedList, orgLabs = c("Ab", "Kp"))
+
+# get results from model predictions
+
+# Ab
+mixedAbRes <- formatResults(abMod, mixedDmatList$Ab) %>%
+    cbind(select(mixedDf, id, n, AbCoeff, KpCoeff, Ab, Kp))
+
+mixedAbCm <- confusionMatrix(data = mixedAbRes$pred, reference = mixedAbRes$truth, positive = "pos")
+mixedAbCm
+
+# Kp
+mixedKpRes <- formatResults(kpMod, mixedDmatList$Kp) %>%
+    cbind(select(mixedDf, id, n, AbCoeff, KpCoeff, Ab, Kp))
+
+mixedKpCm <- confusionMatrix(data = mixedKpRes$pred, reference = mixedKpRes$truth, positive = "pos")
+mixedKpCm
+```
+

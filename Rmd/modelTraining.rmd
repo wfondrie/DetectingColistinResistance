@@ -112,7 +112,7 @@ features <- tibble(response = names(featureList), featList = featureList) %>%
     select(response, mz)
 
 features <- unique(features)
-saveRDS(features, file = "../temp/features.RDS")
+saveRDS(features, file = "../temp/features.rds")
 ```
 
 # Extract features from Spectra  
