@@ -107,9 +107,9 @@ summary(comboSummary)
 
 comboSummary %>%
     group_by(n) %>%
-    summarize(numAb = sum(AbPres != "other"),
-              numKp = sum(KpPres != "other"),
-              numOther = sum(AbPres == "other" & KpPres == "other"))
+    summarize(numAb = sum(Ab != "other"),
+              numKp = sum(Kp != "other"),
+              numOther = sum(Ab == "other" & Kp == "other"))
 ```
 
 # Create Complex Spectra from Selections And Extract Features  
