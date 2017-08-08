@@ -48,7 +48,7 @@ formatResults <- function(model, dataList) {
         mutate(truth = dataList$encoding[[1]],
                negVsAll = pos + other,
                posVsAll = neg + other,
-               speciesVsAll = pos + neg,
+               speciesVsOther = pos + neg,
                pred = ifelse(neg > pos & neg > other, "neg", NA),
                pred = ifelse(pos > neg & pos > other, "pos", pred),
                pred = ifelse(other > neg & other > pos, "other", pred))
@@ -229,6 +229,15 @@ ggsave("../results/KpRocCurve.png", width = 3.5, height = 3.5)
 save(AbPrCurve, AbRocCurve, KpPrCurve, KpRocCurve, file = "../temp/curves.rda")
 ```
 
+## Determine How Spectra Are Misclassified
+```{r misclassified}
+abCmTable <- as.tibble(abCm$table) %>% mutate(species = "Ab")
+kpCmTable <- as.tibble(kpCm$table) %>% mutate(species = "Kp")
+
+cmTable <- abCmTable %>% full_join(kpCmTable)
+
+```
+
 ## Variable Importance
 ```{r varImp, results = "hold", fig.show = "hold", fig.width = 4}
 vImpAb <- xgb.importance(colnames(testdmatList$Ab$dat), model = abMod) %>%
@@ -292,36 +301,34 @@ save(vImpAbPlot, vImpKpPlot, file = "../temp/vImpPlots.rda")
 
 ```
 
-## Determine How Spectra Are Misclassified
-```{r misclassified}
-abCmTable <- as.tibble(abCm$table) %>% mutate(species = "Ab")
-kpCmTable <- as.tibble(kpCm$table) %>% mutate(species = "Kp")
-
-cmTable <- abCmTable %>% full_join(kpCmTable)
-
-```
-
-## Performance on Simulated Mixture Spectra
+## Performance on Simulated Mixture Spectra  
 ```{r, loadMixtureData}
-# complex spectra summary
+# Import simulated mixture spectra features and information
 mixedSumm <- readRDS("../temp/complexSpectraSummary.rds")
 mixedComponents <- readRDS("../temp/complexComponents.rds")
-
 
 mixedList <- readRDS("../temp/mixtureDatList.rds")
 
 mixedDmatList <- prepareData(mixedList, orgLabs = c("Ab", "Kp"))
+```
 
-# get results from model predictions
-
+### Acinetobacter baumannii  
+```{r, mixedAbCm}
 # Ab
-mixedAbRes <- formatResults(abMod, mixedDmatList$Ab) 
+mixedAbRes <- formatResults(abMod, mixedDmatList$Ab) %>%
+    cbind(., mixedList$Ab) %>%
+    select(-starts_with("mz"))
 
 mixedAbCm <- confusionMatrix(data = mixedAbRes$pred, reference = mixedAbRes$truth, positive = "pos")
 mixedAbCm
+```
 
+### Klebsiella pneumoniae
+```{r, mixedKpCm}
 # Kp
-mixedKpRes <- formatResults(kpMod, mixedDmatList$Kp)
+mixedKpRes <- formatResults(kpMod, mixedDmatList$Kp) %>%
+    cbind(., mixedList$Kp) %>%
+    select(-starts_with("mz"))
 
 mixedKpCm <- confusionMatrix(data = mixedKpRes$pred, reference = mixedKpRes$truth, positive = "pos")
 mixedKpCm
