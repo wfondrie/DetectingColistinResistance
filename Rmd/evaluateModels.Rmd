@@ -73,8 +73,8 @@ abPosPR <- pr.curve(abRes$pos[abRes$truth == "pos"],
 abNegPR <- pr.curve(abRes$neg[abRes$truth == "neg"], 
                     abRes$neg[abRes$truth != "neg"], curve = T)
 
-abSpeciesPR <- pr.curve(abRes$speciesVsAll[abRes$truth != "other"], 
-                        abRes$speciesVsAll[abRes$truth ==  "other"], curve = T)
+abSpeciesPR <- pr.curve(abRes$speciesVsOther[abRes$truth != "other"], 
+                        abRes$speciesVsOther[abRes$truth ==  "other"], curve = T)
 
 # Ab ROC curves
 abPosROC <- roc.curve(abRes$pos[abRes$truth == "pos"], 
@@ -83,8 +83,8 @@ abPosROC <- roc.curve(abRes$pos[abRes$truth == "pos"],
 abNegROC <- roc.curve(abRes$neg[abRes$truth == "neg"], 
                     abRes$neg[abRes$truth != "neg"], curve = T)
 
-abSpeciesROC <- roc.curve(abRes$speciesVsAll[abRes$truth != "other"], 
-                        abRes$speciesVsAll[abRes$truth ==  "other"], curve = T)
+abSpeciesROC <- roc.curve(abRes$speciesVsOther[abRes$truth != "other"], 
+                        abRes$speciesVsOther[abRes$truth ==  "other"], curve = T)
 ```
 
 ### Klebsiella pneumoniae
@@ -102,8 +102,8 @@ kpPosPR <- pr.curve(kpRes$pos[kpRes$truth == "pos"],
 kpNegPR <- pr.curve(kpRes$neg[kpRes$truth == "neg"], 
                     kpRes$neg[kpRes$truth != "neg"], curve = T)
 
-kpSpeciesPR <- pr.curve(kpRes$speciesVsAll[kpRes$truth != "other"], 
-                        kpRes$speciesVsAll[kpRes$truth ==  "other"], curve = T)
+kpSpeciesPR <- pr.curve(kpRes$speciesVsOther[kpRes$truth != "other"], 
+                        kpRes$speciesVsOther[kpRes$truth ==  "other"], curve = T)
 
 # Kp ROC curves
 kpPosROC <- roc.curve(kpRes$pos[kpRes$truth == "pos"], 
@@ -112,8 +112,8 @@ kpPosROC <- roc.curve(kpRes$pos[kpRes$truth == "pos"],
 kpNegROC <- roc.curve(kpRes$neg[kpRes$truth == "neg"], 
                     kpRes$neg[kpRes$truth != "neg"], curve = T)
 
-kpSpeciesROC <- roc.curve(kpRes$speciesVsAll[kpRes$truth != "other"], 
-                        kpRes$speciesVsAll[kpRes$truth ==  "other"], curve = T)
+kpSpeciesROC <- roc.curve(kpRes$speciesVsOther[kpRes$truth != "other"], 
+                        kpRes$speciesVsOther[kpRes$truth ==  "other"], curve = T)
 ```
 
 ### Plot PR and ROC Curves
@@ -314,23 +314,171 @@ mixedDmatList <- prepareData(mixedList, orgLabs = c("Ab", "Kp"))
 
 ### Acinetobacter baumannii  
 ```{r, mixedAbCm}
-# Ab
 mixedAbRes <- formatResults(abMod, mixedDmatList$Ab) %>%
     cbind(., mixedList$Ab) %>%
-    select(-starts_with("mz"))
+    select(-starts_with("mz")) %>%
+    mutate(orgResults = "A. baumannii") %>%
+    as_tibble(.)
 
 mixedAbCm <- confusionMatrix(data = mixedAbRes$pred, reference = mixedAbRes$truth, positive = "pos")
 mixedAbCm
+
+
+mixedAbPRall <- mixedAbRes %>%
+    group_by(orgResults) %>%
+    do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
+       prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
+       prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
+                            .$speciesVsOther[.$truth ==  "other"], curve = T),
+       rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
+       rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
+       rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
+                            .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
+    mutate(prPosAUC = prPos$auc.integral,
+           prNegAUC = prNeg$auc.integral,
+           prSpeciesAUC = prSpecies$auc.integral,
+           rocPosAUC = rocPos$auc,
+           rocNegAUC = rocNeg$auc,
+           rocSpeciesAUC = rocSpecies$auc,
+           n = "Overall")
+
+mixedAbPRByn <- mixedAbRes %>%
+    group_by(orgResults, n) %>%
+    do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
+       prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
+       prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
+                            .$speciesVsOther[.$truth ==  "other"], curve = T),
+       rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
+       rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
+       rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
+                            .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
+    mutate(prPosAUC = prPos$auc.integral,
+           prNegAUC = prNeg$auc.integral,
+           prSpeciesAUC = prSpecies$auc.integral,
+           rocPosAUC = rocPos$auc,
+           rocNegAUC = rocNeg$auc,
+           rocSpeciesAUC = rocSpecies$auc)
+
+mixedAbCurves <- mixedAbPRall %>% rbind(mixedAbPRByn)
 ```
 
 ### Klebsiella pneumoniae
 ```{r, mixedKpCm}
-# Kp
 mixedKpRes <- formatResults(kpMod, mixedDmatList$Kp) %>%
     cbind(., mixedList$Kp) %>%
-    select(-starts_with("mz"))
+    select(-starts_with("mz"))%>%
+    mutate(orgResults = "K. pneumoniae") %>%
+    as_tibble(.)
 
 mixedKpCm <- confusionMatrix(data = mixedKpRes$pred, reference = mixedKpRes$truth, positive = "pos")
 mixedKpCm
+
+mixedKpAll <- mixedKpRes %>%
+    group_by(orgResults) %>%
+    do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
+       prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
+       prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
+                            .$speciesVsOther[.$truth ==  "other"], curve = T),
+       rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
+       rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
+       rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
+                            .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
+    mutate(prPosAUC = prPos$auc.integral,
+           prNegAUC = prNeg$auc.integral,
+           prSpeciesAUC = prSpecies$auc.integral,
+           rocPosAUC = rocPos$auc,
+           rocNegAUC = rocNeg$auc,
+           rocSpeciesAUC = rocSpecies$auc,
+           n = "Overall")
+
+mixedKpByn <- mixedKpRes %>%
+    group_by(orgResults, n) %>%
+    do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
+       prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
+       prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
+                            .$speciesVsOther[.$truth ==  "other"], curve = T),
+       rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
+       rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
+       rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
+                            .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
+    mutate(prPosAUC = prPos$auc.integral,
+           prNegAUC = prNeg$auc.integral,
+           prSpeciesAUC = prSpecies$auc.integral,
+           rocPosAUC = rocPos$auc,
+           rocNegAUC = rocNeg$auc,
+           rocSpeciesAUC = rocSpecies$auc)
+
+mixedKpCurves <- mixedKpAll %>% rbind(mixedKpByn)
+
+# All PR and ROC results
+mixedCurves <- mixedKpCurves %>% rbind(mixedAbCurves)
+```
+
+### Plot PR and ROC curves for Simulated Mixtures by Number of Spectra in Mixture
+```{r, fig.width = 8, fig.height = 5, results = "hold"}
+mixedCurveDat <- mixedCurves %>%
+    select(-ends_with("AUC")) %>%
+    gather(curveType, curveDat, -n, -orgResults) %>%
+    group_by(orgResults, n, curveType) %>% 
+    do(curveDf = as.data.frame(.$curveDat[[1]]$curve)) %>%
+    unnest(curveDf) %>%
+    rename("Rec_Spec" = V1, "Prec_Sens" = V2, "Threshold" = V3) %>%
+    mutate(PrOrRoc = ifelse(str_detect(curveType, "pr"), "PR", "ROC"),
+           type = ifelse(str_detect(curveType, "Neg"), "Colistin-Sensitive", "Species"),
+           type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", type),
+           type = as.factor(type))
+
+prCurves <- mixedCurveDat %>%
+    filter(PrOrRoc == "PR") %>%
+    ggplot(aes(x = Rec_Spec, y = Prec_Sens, color = n)) +
+    geom_path(size = 1) +
+    coord_equal() +
+    facet_grid(orgResults ~ type) +
+    xlab("Recall") +
+    ylab("Precision") +
+    scale_color_discrete(name = "Number of\nSpecies")
+prCurves
+
+ggsave("../results/mixturePRCurves.png", width = 8, height = 5)
+
+
+rocCurves <- mixedCurveDat %>%
+    filter(PrOrRoc == "ROC") %>%
+    ggplot(aes(x = Rec_Spec, y = Prec_Sens, color = n)) +
+    geom_path(size = 1) +
+    coord_equal() +
+    facet_grid(orgResults ~ type) +
+    xlab("1 - Specificity") +
+    ylab("Sensitivity") +
+    scale_color_discrete(name = "Number of\nSpecies")
+rocCurves
+
+ggsave("../results/mixtureROCCurves.png", width = 8, height = 5)
+
+
+# save figures for later 
+save(prCurves, rocCurves, file = "../temp/curves.rda")
+```
+
+
+### Plot the AUC of PR and ROC Curves With Increasing Matrix Complexity  
+```{r, fig.width = 6}
+mixedCurvesAUC <- mixedCurves %>%
+    select(ends_with("AUC"), n, orgResults) %>%
+    gather(curveType, AUC, -n, -orgResults) %>%
+    mutate(PrOrRoc = ifelse(str_detect(curveType, "pr"), "PR", "ROC"),
+           type = ifelse(str_detect(curveType, "Neg"), "Colistin-Sensitive", "Species"),
+           type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", type),
+           type = as.factor(type))
+
+mixedCurvesAUC %>%
+    filter(n != "Otherwise") %>%
+    ggplot(aes(x = as.numeric(n), y = AUC, color = type)) +
+    geom_point() + 
+    geom_line() +
+    xlab("Number of Species in Mixture") +
+    ylab("Area Under the Curve") +
+    scale_color_discrete(name = NULL) +
+    facet_grid(PrOrRoc ~ orgResults)
 ```
 
