@@ -80,8 +80,9 @@ selectLinearCombos <- function(n, info) {
         group_by(species) %>%
         sample_n(size = 1) %>%
         ungroup() %>%
-        sampl_n(size = length(species)) %>%
-        mutate(coeff = c(1, runif(n-1, 0.1, 1))) # mixed with coefficients [0.1, 1]
+        sample_frac(size = 1) %>%
+        #mutate(coeff = c(1, runif(n-1, 0.1, 1))) # mixed with coefficients [0.1, 1]
+        mutate(coeff = c(1, sample(c(1, 0.5, 0.25, 0.1), n-1, replace = T)))
     
     return(selected)
 }
