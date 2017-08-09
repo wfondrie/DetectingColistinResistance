@@ -40,6 +40,12 @@ files <- list.files("../data/fullLib",
                     recursive = T)
 #files <- sample(files, 50)
 
+urineList <-  c("Acinetobacter baumannii",
+                "Klebsiella pneumoniae",
+                "Escherichia coli",
+                "Pseudomonas aeruginosa",
+                "Proteus mirabilis")
+
 specInfo <- tibble(fname = files) %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
            id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
@@ -47,7 +53,8 @@ specInfo <- tibble(fname = files) %>%
            Ab = ifelse(str_detect(type, "Acinetobacter baumannii - res"), "pos", "other"),
            Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), "pos", "other"),
            Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
-           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)))
+           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp))) %>%
+    filter(species %in% urineList)
 
 summary(specInfo)
 
