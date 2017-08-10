@@ -424,7 +424,7 @@ mixedCurveDat <- mixedCurves %>%
     unnest(curveDf) %>%
     rename("Rec_Spec" = V1, "Prec_Sens" = V2, "Threshold" = V3) %>%
     mutate(PrOrRoc = ifelse(str_detect(curveType, "pr"), "PR", "ROC"),
-           type = ifelse(str_detect(curveType, "Neg"), "Colistin-Sensitive", "Species"),
+           type = ifelse(str_detect(curveType, "Neg"), "Colistin-Susceptible", "Species"),
            type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", type),
            type = as.factor(type))
 
@@ -463,13 +463,15 @@ save(prCurves, rocCurves, file = "../temp/curves.rda")
 
 ### Plot the AUC of PR and ROC Curves With Increasing Matrix Complexity  
 ```{r, fig.width = 6}
+labOrder <- c("Species", "Colistin-Susceptible", "Colistin-Resistant")
+
 mixedCurvesAUC <- mixedCurves %>%
     select(ends_with("AUC"), n, orgResults) %>%
     gather(curveType, AUC, -n, -orgResults) %>%
     mutate(PrOrRoc = ifelse(str_detect(curveType, "pr"), "PR", "ROC"),
-           type = ifelse(str_detect(curveType, "Neg"), "Colistin-Sensitive", "Species"),
+           type = ifelse(str_detect(curveType, "Neg"), "Colistin-Susceptible", "Species"),
            type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", type),
-           type = as.factor(type))
+           type = fct_relevel(as.factor(type), labOrder))
 
 mixedCurvesAUC %>%
     filter(n != "Otherwise") %>%
@@ -478,7 +480,62 @@ mixedCurvesAUC %>%
     geom_line() +
     xlab("Number of Species in Mixture") +
     ylab("Area Under the Curve") +
+    ylim(c(0, 1)) +
     scale_color_discrete(name = NULL) +
     facet_grid(PrOrRoc ~ orgResults)
+```
+
+### Plot Misclassifications  
+#### Amount of False Negatives by Mixture Coefficient
+```{r, fig.width = 6}
+mixedRes <- mixedKpRes %>% 
+    full_join(mixedAbRes) %>%
+    filter(n %in% c(2:5),  truth != "other") %>%
+    mutate(correctRes = truth == pred,
+               correctSpecies = speciesVsOther > 0.5,
+           coeff = ifelse(orgResults == "A. baumannii", AbCoeff, KpCoeff)) %>%
+    select(orgResults, correctRes, correctSpecies, truth, pred, coeff)
+
+resDensity <- mixedRes %>%
+    ggplot(aes(x = coeff, fill = correctRes)) +
+    geom_histogram() +
+    facet_grid(. ~ orgResults)
+resDensity
+
+
+speciesDensity <- mixedRes %>%
+    ggplot(aes(x = coeff, fill = correctSpecies)) +
+    geom_histogram() +
+    facet_grid(. ~ orgResults)
+speciesDensity
+
+```
+
+#### Most Common False Positive Signatures
+```{r, results = "hide"}
+fpRes <- mixedKpRes %>% 
+    full_join(mixedAbRes) %>%
+    filter(truth == "pos", pred != "pos") %>%
+    rename(spec_id = id) %>%
+    select(orgResults, spec_id) %>%
+    group_by(orgResults) %>%
+    mutate(total = length(spec_id)) %>%
+    left_join(mixedComponents) %>%
+    group_by(orgResults, species, total) %>%
+    summarize(num = length(species)) %>%
+    arrange(desc(num))
+
+fpSpec <- mixedKpRes %>% 
+    full_join(mixedAbRes) %>%
+    filter(truth == "other", speciesVsOther > 0.5) %>%
+    rename(spec_id = id) %>%
+    select(orgResults, spec_id) %>%
+    group_by(orgResults) %>%
+    mutate(total = length(spec_id)) %>%
+    left_join(mixedComponents) %>%
+    group_by(orgResults, species, total) %>%
+    summarize(num = length(species)) %>%
+    arrange(desc(num))
+    
 ```
 
