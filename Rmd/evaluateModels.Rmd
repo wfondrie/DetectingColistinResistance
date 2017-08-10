@@ -4,7 +4,7 @@ output: github_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide", fig.align = "center",
-                      fig.height = 3.5, fig.width = 3.5)
+                      fig.height = 3.5, fig.width =6)
 ```
 
 ## Introduction 
@@ -85,6 +85,14 @@ abNegROC <- roc.curve(abRes$neg[abRes$truth == "neg"],
 
 abSpeciesROC <- roc.curve(abRes$speciesVsOther[abRes$truth != "other"], 
                         abRes$speciesVsOther[abRes$truth ==  "other"], curve = T)
+
+abPrior <- abRes %>%
+    summarize(pos = sum(truth == "pos") / length(truth),
+              neg = sum(truth == "neg") / length(truth),
+              species = sum(truth != "other") / length(truth)) %>%
+    gather(type, Precision)
+
+
 ```
 
 ### Klebsiella pneumoniae
@@ -114,6 +122,12 @@ kpNegROC <- roc.curve(kpRes$neg[kpRes$truth == "neg"],
 
 kpSpeciesROC <- roc.curve(kpRes$speciesVsOther[kpRes$truth != "other"], 
                         kpRes$speciesVsOther[kpRes$truth ==  "other"], curve = T)
+
+kpPrior <- kpRes %>%
+    summarize(pos = sum(truth == "pos") / length(truth),
+              neg = sum(truth == "neg") / length(truth),
+              species = sum(truth != "other") / length(truth)) %>%
+    gather(type, prior)
 ```
 
 ### Plot PR and ROC Curves
@@ -124,9 +138,11 @@ prnames <- c("Recall", "Precision", "threshold")
 prAb <- as.tibble(rbind(abPosPR$curve, abNegPR$curve, abSpeciesPR$curve))
 names(prAb) <- prnames
 
-labsAb <- c(paste0("Resistant, AUC = ", sigRound(abPosPR$auc.integral, 3)),
-            paste0("Susceptible, AUC = ", sigRound(abNegPR$auc.integral, 3)),
-            paste0("Species, AUC = ", sigRound(abSpeciesPR$auc.integral, 3)))
+labsAb <- c(paste0("Resistant\nAUC = ", sigRound(abPosPR$auc.integral, 3)),
+            paste0("Susceptible\nAUC = ", sigRound(abNegPR$auc.integral, 3)),
+            paste0("Species\nAUC = ", sigRound(abSpeciesPR$auc.integral, 3)))
+
+abPrior$cond <- labsAb
 
 AbPrCurve <- prAb %>%
     mutate(cond = c(rep(labsAb[1], nrow(abPosPR$curve)),
@@ -135,9 +151,10 @@ AbPrCurve <- prAb %>%
            cond = fct_rev(fct_relevel(as.factor(cond), labsAb))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
     geom_path(size = 1)  +
+    geom_hline(data = abPrior, aes(yintercept = Precision, color = cond), linetype = "dashed", size = 1) +
     coord_equal() +
-    theme(legend.position = c(0.05,0.05),
-          legend.justification = c(0,0),
+    theme(#legend.position = c(0.05,0.05),
+          #legend.justification = c(0,0),
           legend.title = element_blank()) +
     ggtitle(expression(italic("A. baummannii")))
 
@@ -152,6 +169,7 @@ names(rocAb) <- rocnames
 roclabsAb <- c(paste0("Resistant, AUC = ", sigRound(abPosROC$auc, 3)),
                paste0("Susceptible, AUC = ", sigRound(abNegROC$auc, 3)),
                paste0("Species, AUC = ", sigRound(abSpeciesROC$auc, 3)))
+
 
 AbRocCurve <- rocAb %>%
     mutate(cond = c(rep(roclabsAb[1], nrow(abPosROC$curve)),
@@ -420,7 +438,8 @@ mixedCurveDat <- mixedCurves %>%
     select(-ends_with("AUC")) %>%
     gather(curveType, curveDat, -n, -orgResults) %>%
     group_by(orgResults, n, curveType) %>% 
-    do(curveDf = as.data.frame(.$curveDat[[1]]$curve)) %>%
+    do(curveDf = as_tibble(.$curveDat[[1]]$curve)) %>%
+    ungroup() %>%
     unnest(curveDf) %>%
     rename("Rec_Spec" = V1, "Prec_Sens" = V2, "Threshold" = V3) %>%
     mutate(PrOrRoc = ifelse(str_detect(curveType, "pr"), "PR", "ROC"),
@@ -492,9 +511,12 @@ mixedRes <- mixedKpRes %>%
     full_join(mixedAbRes) %>%
     filter(n %in% c(2:5),  truth != "other") %>%
     mutate(correctRes = truth == pred,
-               correctSpecies = speciesVsOther > 0.5,
+           correctSpecies = speciesVsOther > 0.3,
            coeff = ifelse(orgResults == "A. baumannii", AbCoeff, KpCoeff)) %>%
-    select(orgResults, correctRes, correctSpecies, truth, pred, coeff)
+    select(orgResults, correctRes, correctSpecies, truth, pred, coeff) %>%
+    group_by(coeff) %>%
+    summarize(res = sum(correctRes)/length(correctRes),
+              species = sum(correctSpecies)/length(correctSpecies))
 
 resDensity <- mixedRes %>%
     ggplot(aes(x = coeff, fill = correctRes)) +
