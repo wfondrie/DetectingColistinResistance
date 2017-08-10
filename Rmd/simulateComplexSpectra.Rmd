@@ -59,6 +59,7 @@ selectLinearCombos <- function(n, info) {
     
     regex <- "(Acinetobacter baumannii|Klebsiella pneumoniae)"
     pAbKp <- 0.3/n
+    res <- sample(c(" - res", " - sen"), 1) # 50:50 shot of res or sen
     
     speciesSelect <- info %>%
         group_by(species) %>%
@@ -70,6 +71,7 @@ selectLinearCombos <- function(n, info) {
     
     selected <- speciesSelect %>%
         left_join(info) %>%
+        filter(type != paste0(species, res)) %>%
         group_by(species) %>%
         sample_n(size = 1) %>%
         ungroup() %>%
@@ -111,7 +113,9 @@ comboSummary %>%
     group_by(n) %>%
     summarize(numAb = sum(Ab != "other"),
               numKp = sum(Kp != "other"),
-              numOther = sum(Ab == "other" & Kp == "other"))
+              numOther = sum(Ab == "other" & Kp == "other"),
+              numPosAb = sum(Ab == "pos"),
+              numPosKp = sum(Kp == "neg"))
 ```
 
 # Create Complex Spectra from Selections And Extract Features  
