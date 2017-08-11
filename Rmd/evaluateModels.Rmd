@@ -90,7 +90,7 @@ abPrior <- abRes %>%
     summarize(pos = sum(truth == "pos") / length(truth),
               neg = sum(truth == "neg") / length(truth),
               species = sum(truth != "other") / length(truth)) %>%
-    gather(type, Precision)
+    gather(type, prior)
 
 
 ```
@@ -151,24 +151,24 @@ AbPrCurve <- prAb %>%
            cond = fct_rev(fct_relevel(as.factor(cond), labsAb))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
     geom_path(size = 1)  +
-    geom_hline(data = abPrior, aes(yintercept = Precision, color = cond), linetype = "dashed", size = 1) +
+    geom_hline(data = abPrior, aes(yintercept = prior, color = cond), 
+               linetype = "dashed", size = 1) +
     coord_equal() +
-    theme(#legend.position = c(0.05,0.05),
-          #legend.justification = c(0,0),
-          legend.title = element_blank()) +
+    theme(legend.title = element_blank(),
+          legend.key.height = unit(1.5, "lines")) +
     ggtitle(expression(italic("A. baummannii")))
 
 AbPrCurve
-ggsave("../results/AbPrCurve.png", width = 3.5, height = 3.5)
+ggsave("../results/AbPrCurve.png", width = 3.5, height = 2.5)
 
 # ROC
 rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
 rocAb <- as.tibble(rbind(abPosROC$curve, abNegROC$curve, abSpeciesROC$curve))
 names(rocAb) <- rocnames
 
-roclabsAb <- c(paste0("Resistant, AUC = ", sigRound(abPosROC$auc, 3)),
-               paste0("Susceptible, AUC = ", sigRound(abNegROC$auc, 3)),
-               paste0("Species, AUC = ", sigRound(abSpeciesROC$auc, 3)))
+roclabsAb <- c(paste0("Resistant\nAUC = ", sigRound(abPosROC$auc, 3)),
+               paste0("Susceptible\nAUC = ", sigRound(abNegROC$auc, 3)),
+               paste0("Species\nAUC = ", sigRound(abSpeciesROC$auc, 3)))
 
 
 AbRocCurve <- rocAb %>%
@@ -177,15 +177,15 @@ AbRocCurve <- rocAb %>%
                     rep(roclabsAb[3], nrow(abSpeciesROC$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), roclabsAb))) %>%
     ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
+    geom_abline(xintercept = 0, slope = 1) +
     geom_path(size = 1)  +
     coord_equal() +
-    theme(legend.position = c(0.95,0.05),
-          legend.justification = c(1,0),
-          legend.title = element_blank()) +
+    theme(legend.title = element_blank(),
+          legend.key.height = unit(1.5, "lines")) +
     ggtitle(expression(italic("A. baummannii")))
 
 AbRocCurve
-ggsave("../results/AbRocCurve.png", width = 3.5, height = 3.5)
+ggsave("../results/AbRocCurve.png", width = 3.5, height = 2.5)
 
 
 ```
@@ -197,9 +197,11 @@ prnames <- c("Recall", "Precision", "threshold")
 prKp <- as.tibble(rbind(kpPosPR$curve, kpNegPR$curve, kpSpeciesPR$curve))
 names(prKp) <- prnames
 
-labsKp <- c(paste0("Resistant, AUC = ", sigRound(kpPosPR$auc.integral, 3)),
-            paste0("Susceptible, AUC = ", sigRound(kpNegPR$auc.integral, 3)),
-            paste0("Species, AUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
+labsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosPR$auc.integral, 3)),
+            paste0("Susceptible\nAUC = ", sigRound(kpNegPR$auc.integral, 3)),
+            paste0("Species\nAUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
+
+kpPrior$cond <- labsKp
 
 KpPrCurve <- prKp %>%
     mutate(cond = c(rep(labsKp[1], nrow(kpPosPR$curve)),
@@ -208,24 +210,25 @@ KpPrCurve <- prKp %>%
            cond = fct_rev(fct_relevel(as.factor(cond), labsKp))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
     geom_path(size = 1)  +
+    geom_hline(data = kpPrior, aes(yintercept = prior, color = cond), 
+               linetype = "dashed", size = 1) +
     coord_equal() +
-    theme(legend.position = c(0.05,0.05),
-          legend.justification = c(0,0),
-          legend.title = element_blank()) +
+    theme(legend.title = element_blank(),
+          legend.key.height = unit(1.5, "lines")) +
     ggtitle(expression(italic("K. pneumoniae")))
 
 KpPrCurve
 
-ggsave("../results/KpPrCurve.png", width = 3.5, height = 3.5)
+ggsave("../results/KpPrCurve.png", width = 3.5, height = 2.5)
 
 # ROC
 rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
 rocKp <- as.tibble(rbind(kpPosROC$curve, kpNegROC$curve, kpSpeciesROC$curve))
 names(rocKp) <- rocnames
 
-roclabsKp <- c(paste0("Resistant,AUC = ", sigRound(kpPosROC$auc, 3)),
-               paste0("Susceptible,AUC = ", sigRound(kpNegROC$auc, 3)),
-               paste0("Species, AUC = ", sigRound(kpSpeciesROC$auc, 3)))
+roclabsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosROC$auc, 3)),
+               paste0("Susceptible\nAUC = ", sigRound(kpNegROC$auc, 3)),
+               paste0("Species\nAUC = ", sigRound(kpSpeciesROC$auc, 3)))
 
 KpRocCurve <- rocKp %>%
     mutate(cond = c(rep(roclabsKp[1], nrow(kpPosROC$curve)),
@@ -233,15 +236,15 @@ KpRocCurve <- rocKp %>%
                     rep(roclabsKp[3], nrow(kpSpeciesROC$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), roclabsKp))) %>%
     ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
+    geom_abline(xintercept = 0, slope = 1) +
     geom_path(size = 1) +
     coord_equal() + 
-    theme(legend.position = c(0.95,0.05),
-          legend.justification = c(1,0),
-          legend.title = element_blank())  +
+    theme(legend.title = element_blank(),
+          legend.key.height = unit(1.5, "lines")) +
     ggtitle(expression(italic("K. pneumoniae")))
 
 KpRocCurve
-ggsave("../results/KpRocCurve.png", width = 3.5, height = 3.5)
+ggsave("../results/KpRocCurve.png", width = 3.5, height = 2.5)
 
 # save plots for later use:
 save(AbPrCurve, AbRocCurve, KpPrCurve, KpRocCurve, file = "../temp/curves.rda")
@@ -447,10 +450,18 @@ mixedCurveDat <- mixedCurves %>%
            type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", type),
            type = as.factor(type))
 
+
+mixedPriors <- tibble(type = c("Colistin-Resistant", "Colistin-Susceptible", "Species"),
+                      `A. baumannii` = c(0.15, 0.15, 0.3),
+                      `K. pneumoniae` = c(0.15, 0.15, 0.3)) %>%
+    gather(orgResults, prior, -type)
+
 prCurves <- mixedCurveDat %>%
     filter(PrOrRoc == "PR") %>%
     ggplot(aes(x = Rec_Spec, y = Prec_Sens, color = n)) +
     geom_path(size = 1) +
+    geom_hline(data = mixedPriors, aes(yintercept = prior), 
+               linetype = "dashed", size = 1) +
     coord_equal() +
     facet_grid(orgResults ~ type) +
     xlab("Recall") +
@@ -458,12 +469,12 @@ prCurves <- mixedCurveDat %>%
     scale_color_discrete(name = "Number of\nSpecies")
 prCurves
 
-ggsave("../results/mixturePRCurves.png", width = 8, height = 5)
-
+ggsave("../results/mixturePRCurves.png", width = 6, height = 4)
 
 rocCurves <- mixedCurveDat %>%
     filter(PrOrRoc == "ROC") %>%
     ggplot(aes(x = Rec_Spec, y = Prec_Sens, color = n)) +
+    geom_abline(xintercept = 0, slope = 1) +
     geom_path(size = 1) +
     coord_equal() +
     facet_grid(orgResults ~ type) +
@@ -472,7 +483,7 @@ rocCurves <- mixedCurveDat %>%
     scale_color_discrete(name = "Number of\nSpecies")
 rocCurves
 
-ggsave("../results/mixtureROCCurves.png", width = 8, height = 5)
+ggsave("../results/mixtureROCCurves.png", width = 6, height = 4)
 
 
 # save figures for later 
@@ -492,7 +503,7 @@ mixedCurvesAUC <- mixedCurves %>%
            type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", type),
            type = fct_relevel(as.factor(type), labOrder))
 
-mixedCurvesAUC %>%
+mixedCurvesAUCPlot <- mixedCurvesAUC %>%
     filter(n != "Otherwise") %>%
     ggplot(aes(x = as.numeric(n), y = AUC, color = type)) +
     geom_point() + 
@@ -502,6 +513,10 @@ mixedCurvesAUC %>%
     ylim(c(0, 1)) +
     scale_color_discrete(name = NULL) +
     facet_grid(PrOrRoc ~ orgResults)
+
+mixedCurvesAUCPlot
+
+ggsave("../results/mixedCurvesAUCPlot.png", width = 6, height = 4)
 ```
 
 ### Plot Misclassifications  
@@ -511,25 +526,12 @@ mixedRes <- mixedKpRes %>%
     full_join(mixedAbRes) %>%
     filter(n %in% c(2:5),  truth != "other") %>%
     mutate(correctRes = truth == pred,
-           correctSpecies = speciesVsOther > 0.3,
+           correctSpecies = speciesVsOther > 0.5,
            coeff = ifelse(orgResults == "A. baumannii", AbCoeff, KpCoeff)) %>%
     select(orgResults, correctRes, correctSpecies, truth, pred, coeff) %>%
     group_by(coeff) %>%
     summarize(res = sum(correctRes)/length(correctRes),
               species = sum(correctSpecies)/length(correctSpecies))
-
-resDensity <- mixedRes %>%
-    ggplot(aes(x = coeff, fill = correctRes)) +
-    geom_histogram() +
-    facet_grid(. ~ orgResults)
-resDensity
-
-
-speciesDensity <- mixedRes %>%
-    ggplot(aes(x = coeff, fill = correctSpecies)) +
-    geom_histogram() +
-    facet_grid(. ~ orgResults)
-speciesDensity
 
 ```
 

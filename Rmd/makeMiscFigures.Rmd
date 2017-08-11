@@ -14,10 +14,13 @@ library(forcats, quietly = T)
 library(MALDIquant, quietly = T)
 library(MALDIquantForeign, quietly = T)
 
+# ggplot2 theme
+source("../R/ggplotTheme.R")
+theme_set(coolTheme)
+
 # import helper functions
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
-source("../R/ggplotTheme.R")
 ```
 
 # load data
@@ -65,8 +68,9 @@ feattbl %>%
          species = ifelse(str_detect(type, "Acineto"), "Ab", "Kp")) %>%
   ggplot(aes(y = relInt, x = res)) +
   geom_jitter(alpha = 0.5) +
-  stat_summary(fun.ymax = median, fun.ymin = median, fun.y = median, color = "red", geom="crossbar") +
-  facet_wrap(~species + feat) + coolTheme
+  stat_summary(fun.ymax = median, fun.ymin = median, 
+               fun.y = median, color = "blue", geom="crossbar") +
+  facet_wrap(~species + feat)
 
 ggsave("../results/resPeaks.png", width = 5, height = 3, unit = "in")
   
@@ -91,12 +95,11 @@ specInfo %>%
   ylab("Number of Mass Spectra") +
   scale_fill_discrete(breaks = c("+","-")) +
   coord_flip() +
-  coolTheme +
   theme(legend.position = c(0.95, 0.05),
         legend.justification = c(1,0),
         axis.title.y = element_blank())
 
-ggsave("results/library.png", height = 4, width = 6)
+ggsave("../results/library.png", height = 3, width = 5)
 
 summary(specInfo$species)
 length(unique(specInfo$species))
