@@ -7,3 +7,9 @@ coolTheme <- theme_bw() +
           panel.border = element_rect(color = "black"),
           panel.grid.minor = element_blank(),
           panel.grid.major = element_line(size = 1))
+
+
+ggColors <- function(n) {
+    hues = seq(15, 375, length = n + 1)
+    hcl(h = hues, l = 65, c = 100)[1:n]
+}

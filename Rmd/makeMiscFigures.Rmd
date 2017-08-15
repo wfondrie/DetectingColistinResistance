@@ -51,7 +51,7 @@ spec <- map_df(specList, extractSpectra)
 
 feattbl <- spec %>%
   group_by(id) %>%
-  do(extractFeatures(., featureVec = unique(features$mz), tol = 1))
+  do(extractFeatures(., featureVec = unique(features$mz), tol = 1.5))
 ```
 
 # plot of resistance peaks and their variation
@@ -65,14 +65,17 @@ feattbl %>%
   filter((str_detect(type, "Klebsiella pneumoniae") & feat %in% kpFeat) |
            (str_detect(type, "Acinetobacter baumannii") & feat %in% abFeat)) %>%
   mutate(res = ifelse(str_detect(type, "res"), "Colistin\nResistant", "Colistin\nSensitive"),
-         species = ifelse(str_detect(type, "Acineto"), "Ab", "Kp")) %>%
+         species = ifelse(str_detect(type, "Acineto"), "A. baumannii", "K. pneumoniae"),
+         feat = str_replace(feat, "mz", "Feature m/z ")) %>%
   ggplot(aes(y = relInt, x = res)) +
-  geom_jitter(alpha = 0.5) +
+  geom_jitter(alpha = 0.5, size = 1) +
   stat_summary(fun.ymax = median, fun.ymin = median, 
-               fun.y = median, color = "blue", geom="crossbar") +
-  facet_wrap(~species + feat)
+               fun.y = median, color = ggColors(3)[3], geom="crossbar") +
+  facet_wrap(~species + feat) +
+  ylab("Relative Intensity") +
+  theme(axis.title.x = element_blank())
 
-ggsave("../results/resPeaks.png", width = 5, height = 3, unit = "in")
+ggsave("../results/resPeaks.png", width = 105, height = 50, unit = "mm")
   
 
 ```
@@ -91,15 +94,16 @@ specInfo %>%
          species = fct_lump(species, 10),
          species = fct_reorder(species, num)) %>%
   ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
-  geom_bar(color = "black") +
+  geom_bar(color = "black", width = 0.75) +
   ylab("Number of Mass Spectra") +
-  scale_fill_discrete(breaks = c("Colistin-Resistant","Colistin-Susceptible")) +
+  scale_fill_discrete(name = NULL, breaks = c("Colistin-Resistant","Colistin-Susceptible")) +
   coord_flip() +
-  theme(legend.position = c(0.95, 0.05),
+  theme(legend.position = c(0.95, 0.25),
         legend.justification = c(1,0),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank(),
+        legend.background = element_rect(color = "black"))
 
-ggsave("../results/library.png", height = 50, width = 100, unit = "mm")
+ggsave("../results/library.png", height = 50, width = 105, unit = "mm")
 
 summary(specInfo$species)
 length(unique(specInfo$species))

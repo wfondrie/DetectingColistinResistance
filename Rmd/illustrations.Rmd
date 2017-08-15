@@ -54,7 +54,7 @@ specDat <- map_df(spec, extractSpectra) %>%
 featurePlot <- specDat %>%
     ggplot(aes(x = mz, y = relInt)) +
     geom_segment(data = features, aes(x = mz, xend = mz, y = -1, yend = -10), 
-                 color = "steelblue") +
+                 color = ggColors(3)[3]) +
     geom_line() +
     facet_wrap(~ class, nrow = 2) +
     xlab("m/z") +
@@ -76,11 +76,11 @@ featurePlotZoom1 <- specDat %>%
     filter(str_detect(class, "Resistant")) %>%
     ggplot(aes(x = mz, y = relInt)) +
     annotate("rect", xmin = selectedMz - 1.5, xmax = selectedMz + 1.5, 
-             ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "steelBlue", color = "steelBlue") +
-    geom_vline(data = features,  aes(xintercept = mz), color = "steelBlue", linetype = "dashed") +
+             ymin = -Inf, ymax = Inf, alpha = 0.1, fill = ggColors(3)[3], color = ggColors(3)[3]) +
+    geom_vline(data = features,  aes(xintercept = mz), color = ggColors(3)[3], linetype = "dashed") +
     geom_line() +
     geom_point(data = filter(maxDf, str_detect(class, "Resistant")), 
-               aes(x = mz, y = relInt + 1.5), color = "black", shape = 8, size = 1.5) + 
+               aes(x = mz, y = relInt + 2), color = "black", shape = 8, size = 1) + 
     xlim(selectedMz + c(-5, 5)) +
     ylim(c(0, 35)) +
     theme(axis.title = element_blank())
@@ -95,18 +95,18 @@ featurePlotZoom2 <- specDat %>%
     filter(str_detect(class, "Susceptible")) %>%
     ggplot(aes(x = mz, y = relInt)) +
     annotate("rect", xmin = selectedMz - 1.5, xmax = selectedMz + 1.5, 
-             ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "steelBlue", color = "steelBlue") +
-    geom_vline(data = features,  aes(xintercept = mz), color = "steelBlue", linetype = "dashed") +
+             ymin = -Inf, ymax = Inf, alpha = 0.1, fill = ggColors(3)[3], color = ggColors(3)[3]) +
+    geom_vline(data = features,  aes(xintercept = mz), color = ggColors(3)[3], linetype = "dashed") +
     geom_line() +
     geom_point(data = filter(maxDf, str_detect(class, "Susceptible")), 
-               aes(x = mz, y = relInt + 1.5), color = "black", shape = 8, size = 1.5) + 
+               aes(x = mz, y = relInt + 2), color = "black", shape = 8, size = 1) + 
     xlim(selectedMz + c(-5, 5)) +
     ylim(c(0, 35)) +
     theme(axis.title = element_blank())
 
 featurePlotZoom2
 
-ggsave("../results/featureSelect_2_2.png",  width = 40, height = 30, unit = "mm")
+ggsave("../results/featureSelect_2_2.png",  width = 30, height = 20, unit = "mm")
 
 ```
 
