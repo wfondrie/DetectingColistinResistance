@@ -27,7 +27,7 @@ set.seed(6554)
 
 ```
 
-# Feature Creation
+## Feature Creation
 
 ```{r}
 features <- readRDS("../temp/features.rds")
@@ -46,8 +46,8 @@ spec <- preProcessSpec(featFiles, hws = 80)
 
 specDat <- map_df(spec, extractSpectra) %>%
     mutate(class = str_replace(type, "Acinetobacter", "A."),
-           class = str_replace(class, " - res", ", Colistin-Resistant"),
-           class = str_replace(class, " - sen", ", Colistin-Susceptible"),
+           class = str_replace(class, " - res", " EAS004, Colistin-Resistant"),
+           class = str_replace(class, " - sen", " EAS001, Colistin-Susceptible"),
            relInt = relInt * 100)
 
 
@@ -57,11 +57,11 @@ featurePlot <- specDat %>%
                  color = ggColors(3)[3]) +
     geom_line() +
     facet_wrap(~ class, nrow = 2) +
-    xlab("m/z") +
+    xlab(expression(italic("m/z"))) +
     ylab("Relative Intensity")
 
 featurePlot 
-ggsave("../results/featureSelect_1.png", width = 105, height = 100, unit = "mm")
+ggsave("../results/featureSelect_1.pdf", width = 105, height = 100, unit = "mm", useDingbats = F)
 
 selectedMz <- features$mz[which.min(abs(features$mz - 2033))] 
 
@@ -80,14 +80,14 @@ featurePlotZoom1 <- specDat %>%
     geom_vline(data = features,  aes(xintercept = mz), color = ggColors(3)[3], linetype = "dashed") +
     geom_line() +
     geom_point(data = filter(maxDf, str_detect(class, "Resistant")), 
-               aes(x = mz, y = relInt + 2), color = "black", shape = 8, size = 1) + 
+               aes(x = mz, y = relInt + 2), color = "black", shape = 8, size = 0.5) + 
     xlim(selectedMz + c(-5, 5)) +
     ylim(c(0, 35)) +
     theme(axis.title = element_blank())
 
 featurePlotZoom1
 
-ggsave("../results/featureSelect_2_1.png",  width = 30, height = 20, unit = "mm")
+ggsave("../results/featureSelect_2_1.pdf",  width = 30, height = 20, unit = "mm", useDingbats = F)
 
 
 # Zoom 2
@@ -99,19 +99,19 @@ featurePlotZoom2 <- specDat %>%
     geom_vline(data = features,  aes(xintercept = mz), color = ggColors(3)[3], linetype = "dashed") +
     geom_line() +
     geom_point(data = filter(maxDf, str_detect(class, "Susceptible")), 
-               aes(x = mz, y = relInt + 2), color = "black", shape = 8, size = 1) + 
+               aes(x = mz, y = relInt + 2), color = "black", shape = 8, size = 0.5) + 
     xlim(selectedMz + c(-5, 5)) +
     ylim(c(0, 35)) +
     theme(axis.title = element_blank())
 
 featurePlotZoom2
 
-ggsave("../results/featureSelect_2_2.png",  width = 30, height = 20, unit = "mm")
+ggsave("../results/featureSelect_2_2.pdf",  width = 30, height = 20, unit = "mm", useDingbats = F)
 
 ```
 
 
-# Real vs Simulated Complex Spectra
+## Real vs Simulated Mixture Spectra
 
 ```{r}
 
@@ -156,15 +156,15 @@ spPlot <- specDat %>%
 
 spPlot %>%
   ggplot(aes(x = as.numeric(mz), y = relInt)) +
-  geom_line(size = 0.5) +
-  geom_line(data = spPlot[!is.na(spPlot$mzRange), ], aes(color = mzRange), size = 0.5) +
+  geom_line(size = 0.25) +
+  geom_line(data = spPlot[!is.na(spPlot$mzRange), ], aes(color = mzRange), size = 0.30) +
   coolTheme +
   theme(legend.position = "none") +
-  labs(x = "m/z",
+  labs(x = expression(italic("m/z")),
        y = "Relative Intensity") +
   facet_wrap(~ spc, ncol = 1)
 
-ggsave("../results/individualSpec.png", width = 105, height = 100, unit = "mm")
+ggsave("../results/individualSpec.pdf", width = 105, height = 100, unit = "mm", useDingbats = F)
 
 
  # Make combined Spectrum ----------------------------------------------------------------------
@@ -193,14 +193,14 @@ cmbSpecNorm <-  cmbSpec %>%
 
 cmbSpecNorm %>%
   ggplot(aes(x = as.numeric(mz), y = relInt)) +
-  geom_line(size = 0.5) +
-  geom_line(data = cmbSpecNorm[!is.na(cmbSpecNorm$mzRange), ], aes(color = mzRange), size = 0.5) +
+  geom_line(size = 0.25) +
+  geom_line(data = cmbSpecNorm[!is.na(cmbSpecNorm$mzRange), ], aes(color = mzRange), size = 0.30) +
   theme(legend.position = "none") +
   labs(title = "Simulated",
-       x = "m/z",
+       x = expression(italic("m/z")),
        y = "Relative Intensity")
 
-ggsave("../results/inSilicoSpec.png", width = 105, height = 50, unit = "mm")
+ggsave("../results/inSilicoSpec.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
 
 # Import and plot experimental mixed spectrum --------------------------------------------------------
 mixFile <- list.files("../data/mixSpec", pattern = ".mzXML", full.names = T)[1]
@@ -223,14 +223,80 @@ origSpecNorm <- origSpecDat %>%
 
 origSpecNorm %>%
   ggplot(aes(x = as.numeric(mz), y = relInt)) +
-  geom_line(size = 0.5) +
-  geom_line(data = origSpecNorm[!is.na(origSpecNorm$mzRange), ], aes(color = mzRange), size = 0.5) +
+  geom_line(size = 0.25) +
+  geom_line(data = origSpecNorm[!is.na(origSpecNorm$mzRange), ], aes(color = mzRange), size = 0.30) +
   coolTheme +
   theme(legend.position = "none") +
   labs(title = "Experimental",
-       x = "m/z",
+       x = expression(italic("m/z")),
        y = "Relative Intensity")
 
-ggsave("../results/experimentalSpec.png", width = 105, height = 50, unit = "mm")
+ggsave("../results/experimentalSpec.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
 
 ```
+
+### Feature extraction performance
+```{r mixtureFeatureExtraction}
+vImpKp <- readRDS("../temp/vImpKp.rds") %>%
+    arrange(desc(Gain)) %>%
+    mutate(featureMz = as.factor(str_replace(Feature, "mz", "")),
+           featureMz = fct_reorder(featureMz, Gain, .desc = T),
+           cols = c(rep("top", 5), rep("bot", length(Feature) - 5))) %>%
+    select(featureMz, Feature, Gain, cols) %>%
+    rename(feat = Feature)
+
+vImpShort <- vImpKp[1:20, ]
+
+singleSpec <- specDat %>%
+    filter(type == "Klebsiella pneumoniae - sen")
+
+kpFeat <- readRDS("../temp/features.rds") %>%
+    filter(response == "Kp")
+
+singleFeat <- extractFeatures(singleSpec, kpFeat$mz, tol = 1.5) %>%
+    mutate(type = "Isolate K. pneumoniae",
+           id = "isolate")
+mixFeat <- extractFeatures(cmbSpec, kpFeat$mz, tol = 1.5) %>%
+    mutate(type = "Simulated Mixture with K. pneumoniae",
+           id = "mixture")
+
+feats <- singleFeat %>%
+    full_join(mixFeat)
+
+
+feats %>%
+    right_join(vImpShort) %>%
+    ggplot(aes(x = featureMz, y = relInt, ymax = relInt, ymin = 0)) +
+    geom_linerange(size = 0.75) +
+    geom_point(size = 2) +
+    ylim(c(0, 1.05)) +
+    ylab("Relative Intensity") +
+    xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          legend.position = "none") +
+    facet_wrap(~ type, ncol = 2)
+    
+ggsave("../results/featureComparison.pdf", width = 160, height = 50, units = "mm", useDingbats = F)
+
+feats %>%
+    right_join(vImpKp) %>%
+    select(featureMz, id, relInt, Gain) %>%
+    spread(id, relInt) %>%
+    mutate(diff = abs(isolate - mixture),
+           Interference = ifelse(diff <= 0.05, "No", "Yes")) %>%
+    ggplot(aes(x = isolate, y = mixture, size = Gain, fill = Interference)) +
+    geom_point(shape = 21) +
+    scale_size_continuous(guide = "none") +
+    ylim(c(0, 1.05)) +
+    xlim(c(0, 1.05)) +
+    theme(legend.position = c(0.99, 0.01),
+          legend.justification = c(1, 0),
+          legend.background = element_rect(color = "black"),
+          legend.key.size = unit(0.5, "lines")) +
+    coord_equal() +
+    xlab("Feature Intensity in Isolate") +
+    ylab("Feature Intensity in Mixture")
+
+ggsave("../results/interferences.pdf", width = 50, height = 50, units = "mm", useDingbats = F)
+```
+

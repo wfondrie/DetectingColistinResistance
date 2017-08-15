@@ -64,7 +64,7 @@ kpFeat <- c("mz1957.0536", "mz1973.1961")
 feattbl %>%
   filter((str_detect(type, "Klebsiella pneumoniae") & feat %in% kpFeat) |
            (str_detect(type, "Acinetobacter baumannii") & feat %in% abFeat)) %>%
-  mutate(res = ifelse(str_detect(type, "res"), "Colistin\nResistant", "Colistin\nSensitive"),
+  mutate(res = ifelse(str_detect(type, "res"), "Colistin\nResistant", "Colistin\nSusceptible"),
          species = ifelse(str_detect(type, "Acineto"), "A. baumannii", "K. pneumoniae"),
          feat = str_replace(feat, "mz", "Feature m/z ")) %>%
   ggplot(aes(y = relInt, x = res)) +
@@ -75,7 +75,7 @@ feattbl %>%
   ylab("Relative Intensity") +
   theme(axis.title.x = element_blank())
 
-ggsave("../results/resPeaks.png", width = 105, height = 50, unit = "mm")
+ggsave("../results/resPeaks.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
   
 
 ```
@@ -101,9 +101,11 @@ specInfo %>%
   theme(legend.position = c(0.95, 0.25),
         legend.justification = c(1,0),
         axis.title.y = element_blank(),
-        legend.background = element_rect(color = "black"))
+        legend.background = element_rect(color = "black"),
+        legend.key.size = unit(0.5, "lines"),
+        legend.title = element_blank())
 
-ggsave("../results/library.png", height = 50, width = 105, unit = "mm")
+ggsave("../results/library.pdf", height = 50, width = 105, unit = "mm", useDingbats = F)
 
 summary(specInfo$species)
 length(unique(specInfo$species))

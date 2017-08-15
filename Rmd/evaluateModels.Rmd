@@ -143,6 +143,7 @@ labsAb <- c(paste0("Resistant\nAUC = ", sigRound(abPosPR$auc.integral, 3)),
             paste0("Species\nAUC = ", sigRound(abSpeciesPR$auc.integral, 3)))
 
 abPrior$cond <- labsAb
+abPrior$cond <- fct_rev(fct_relevel(as.factor(abPrior$cond), labsAb))
 
 AbPrCurve <- prAb %>%
     mutate(cond = c(rep(labsAb[1], nrow(abPosPR$curve)),
@@ -150,19 +151,24 @@ AbPrCurve <- prAb %>%
                     rep(labsAb[3], nrow(abSpeciesPR$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), labsAb))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
-    geom_path(size = 1)  +
     geom_hline(data = abPrior, aes(yintercept = prior, color = cond), 
                linetype = "dashed", size = 1) +
+    geom_path(size = 1)  +
     coord_equal() +
+    ylim(c(0, 1)) +
+    xlim(c(0, 1)) +
     theme(legend.title = element_blank(),
-          legend.key.height = unit(1.5, "lines")) +
-    ggtitle(expression(italic("A. baummannii")))
+          legend.key.height = unit(1.2, "lines"),
+          legend.key.width = unit(0.6, "lines"),
+          legend.margin = margin(l = -0.5, unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
+    ggtitle(expression(italic("A. baumannii")))
 
 AbPrCurve
-ggsave("../results/AbPrCurve.png", width = 3.5, height = 2.5)
+ggsave("../results/AbPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 # ROC
-rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
+rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
 rocAb <- as.tibble(rbind(abPosROC$curve, abNegROC$curve, abSpeciesROC$curve))
 names(rocAb) <- rocnames
 
@@ -176,16 +182,21 @@ AbRocCurve <- rocAb %>%
                     rep(roclabsAb[2], nrow(abNegROC$curve)),
                     rep(roclabsAb[3], nrow(abSpeciesROC$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), roclabsAb))) %>%
-    ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
+    ggplot(aes(x = `1 - Specificity (FPR)`, y = `Sensitivity (TPR)`, color = cond)) +
     geom_abline(xintercept = 0, slope = 1) +
-    geom_path(size = 1)  +
+    geom_path(size = 1) +
+    ylim(c(0, 1)) +
+    xlim(c(0, 1)) +
     coord_equal() +
     theme(legend.title = element_blank(),
-          legend.key.height = unit(1.5, "lines")) +
-    ggtitle(expression(italic("A. baummannii")))
+          legend.key.height = unit(1.2, "lines"),
+          legend.key.width = unit(0.6, "lines"),
+          legend.margin = margin(l = -0.5, unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
+    ggtitle(expression(italic("A. baumannii")))
 
 AbRocCurve
-ggsave("../results/AbRocCurve.png", width = 3.5, height = 2.5)
+ggsave("../results/AbRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 
 ```
@@ -202,27 +213,31 @@ labsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosPR$auc.integral, 3)),
             paste0("Species\nAUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
 
 kpPrior$cond <- labsKp
+kpPrior$cond <- fct_rev(fct_relevel(as.factor(kpPrior$cond), labsKp))
 
-KpPrCurve <- prKp %>%
+prKp %>%
     mutate(cond = c(rep(labsKp[1], nrow(kpPosPR$curve)),
                     rep(labsKp[2], nrow(kpNegPR$curve)),
                     rep(labsKp[3], nrow(kpSpeciesPR$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), labsKp))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
-    geom_path(size = 1)  +
     geom_hline(data = kpPrior, aes(yintercept = prior, color = cond), 
                linetype = "dashed", size = 1) +
+    geom_path(size = 1)  +
+    ylim(c(0, 1)) +
+    xlim(c(0, 1)) +
     coord_equal() +
     theme(legend.title = element_blank(),
-          legend.key.height = unit(1.5, "lines")) +
+          legend.key.height = unit(1.2, "lines"),
+          legend.key.width = unit(0.6, "lines"),
+          legend.margin = margin(l = -0.5, unit = "lines"),
+          plot.title = element_text(margin = margin(b = -0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae")))
 
-KpPrCurve
-
-ggsave("../results/KpPrCurve.png", width = 3.5, height = 2.5)
+ggsave("../results/KpPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 # ROC
-rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
+rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
 rocKp <- as.tibble(rbind(kpPosROC$curve, kpNegROC$curve, kpSpeciesROC$curve))
 names(rocKp) <- rocnames
 
@@ -230,24 +245,25 @@ roclabsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosROC$auc, 3)),
                paste0("Susceptible\nAUC = ", sigRound(kpNegROC$auc, 3)),
                paste0("Species\nAUC = ", sigRound(kpSpeciesROC$auc, 3)))
 
-KpRocCurve <- rocKp %>%
+rocKp %>%
     mutate(cond = c(rep(roclabsKp[1], nrow(kpPosROC$curve)),
                     rep(roclabsKp[2], nrow(kpNegROC$curve)),
                     rep(roclabsKp[3], nrow(kpSpeciesROC$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), roclabsKp))) %>%
-    ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
+    ggplot(aes(x = `1 - Specificity (FPR)`, y = `Sensitivity (TPR)`, color = cond)) +
     geom_abline(xintercept = 0, slope = 1) +
     geom_path(size = 1) +
+    ylim(c(0, 1)) +
+    xlim(c(0, 1)) +
     coord_equal() + 
     theme(legend.title = element_blank(),
-          legend.key.height = unit(1.5, "lines")) +
+          legend.key.height = unit(1.2, "lines"),
+          legend.key.width = unit(0.6, "lines"),
+          legend.margin = margin(l = -0.5, unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae")))
 
-KpRocCurve
-ggsave("../results/KpRocCurve.png", width = 3.5, height = 2.5)
-
-# save plots for later use:
-save(AbPrCurve, AbRocCurve, KpPrCurve, KpRocCurve, file = "../temp/curves.rda")
+ggsave("../results/KpRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 ```
 
 ## Determine How Spectra Are Misclassified
@@ -277,49 +293,53 @@ vImp <- vImpAb %>%
     full_join(vImpKp) %>%
     mutate(featureMz = as.factor(str_replace(Feature, "mz", "")),
            featureMz = fct_reorder(featureMz, Gain, .desc = T),
-           color = ifelse(featureMz %in% basePeaks, "Known Base Lipid A Structure", NA),
-           color = ifelse(featureMz %in% resPeaks, "Known Resistance Lipid A Structure", color)) %>%
+           color = ifelse(featureMz %in% basePeaks, "Base Lipid A Structure", NA),
+           color = ifelse(featureMz %in% resPeaks, "Resistance Lipid A Structure", color)) %>%
     group_by(org) %>%
     arrange(desc(Gain)) %>%
     filter(Gain >= Gain[20])
 
 # Acinetobacter
-vImpAbPlot <- vImp %>%
+vImp %>%
     filter(org == "Ab") %>%
     ggplot(aes(x = featureMz, y = Gain, ymax = Gain, ymin = 0)) +
-    geom_linerange(size = 1) +
+    geom_linerange(size = 0.75) +
     geom_point(size = 2, aes(color = color)) +
     xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
-    scale_color_discrete(breaks = c("Known Base Lipid A Structure", "Known Resistance Lipid A Structure")) +
+    scale_color_discrete(breaks = c("Base Lipid A Structure", "Resistance Lipid A Structure")) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
-          legend.position = c(0.95, 0.95),
+          legend.position = c(0.996, 0.992),
           legend.justification = c(1, 1),
-          legend.title = element_blank()) +
-    ggtitle(expression(italic("A. baummannii")))
+          legend.title = element_blank(),
+          legend.background = element_rect(color = "black"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(t = 0, b = 0.2, l = 0.2, r = 0.2,  unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
+    ggtitle(expression(italic("A. baumannii")))
 
-vImpAbPlot
-ggsave("../results/vImpAbPlot.png", height = 3, width = 4)
+ggsave("../results/vImpAbPlot.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 # Klebsiella
-vImpKpPlot <- vImp %>%
+vImp %>%
     filter(org == "Kp") %>%
     ggplot(aes(x = featureMz, y = Gain, ymax = Gain, ymin = 0)) +
-    geom_linerange(size = 1) +
+    geom_linerange(size = 0.75) +
     geom_point(size = 2, aes(color = color)) +
     xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
-    scale_color_discrete(breaks = c("Known Base Lipid A Structure", "Known Resistance Lipid A Structure")) +
+    scale_color_discrete(breaks = c("Base Lipid A Structure", "Resistance Lipid A Structure")) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
-          legend.position = c(0.95, 0.95),
+          legend.position = c(0.996, 0.992),
           legend.justification = c(1, 1),
-          legend.title = element_blank()) +
+          legend.title = element_blank(),
+          legend.background = element_rect(color = "black"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(t = 0, b = 0.2, l = 0.2, r = 0.2,  unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae")))
 
-vImpKpPlot
-ggsave("../results/vImpKpPlot.png", height = 3, width = 4)
+ggsave("../results/vImpKpPlot.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
-# save for later
-save(vImpAbPlot, vImpKpPlot, file = "../temp/vImpPlots.rda")
-
+saveRDS(vImpKp, "../temp/vImpKp.rds")
 ```
 
 ## Performance on Simulated Mixture Spectra  
@@ -456,34 +476,39 @@ mixedPriors <- tibble(type = c("Colistin-Resistant", "Colistin-Susceptible", "Sp
                       `K. pneumoniae` = c(0.15, 0.15, 0.3)) %>%
     gather(orgResults, prior, -type)
 
-prCurves <- mixedCurveDat %>%
+mixedCurveDat %>%
     filter(PrOrRoc == "PR") %>%
     ggplot(aes(x = Rec_Spec, y = Prec_Sens, color = n)) +
-    geom_path(size = 1) +
+    geom_path() +
     geom_hline(data = mixedPriors, aes(yintercept = prior), 
                linetype = "dashed", size = 1) +
     coord_equal() +
     facet_grid(orgResults ~ type) +
     xlab("Recall") +
     ylab("Precision") +
-    scale_color_discrete(name = "Number of\nSpecies")
-prCurves
+    scale_color_discrete(name = "Number of Species") +
+    theme(legend.key.size = unit(0.75, "lines"),
+          legend.margin = margin(t = -0.5, unit = "lines"),
+          legend.position = "bottom")
 
-ggsave("../results/mixturePRCurves.png", width = 6, height = 4)
+ggsave("../results/mixturePRCurves.pdf", width = 105, height = 80, units = "mm", useDingbats = F)
 
-rocCurves <- mixedCurveDat %>%
+
+mixedCurveDat %>%
     filter(PrOrRoc == "ROC") %>%
     ggplot(aes(x = Rec_Spec, y = Prec_Sens, color = n)) +
     geom_abline(xintercept = 0, slope = 1) +
-    geom_path(size = 1) +
+    geom_path() +
     coord_equal() +
     facet_grid(orgResults ~ type) +
-    xlab("1 - Specificity") +
-    ylab("Sensitivity") +
-    scale_color_discrete(name = "Number of\nSpecies")
-rocCurves
+    xlab("1 - Specificity (FPR)") +
+    ylab("Sensitivity (TPR)") +
+    scale_color_discrete(name = "Number of Species") +
+    theme(legend.key.size = unit(0.75, "lines"),
+          legend.margin = margin(t = -0.5, unit = "lines"),
+          legend.position = "bottom")
 
-ggsave("../results/mixtureROCCurves.png", width = 6, height = 4)
+ggsave("../results/mixtureROCCurves.pdf", width = 105, height = 80, units = "mm", useDingbats = F)
 
 
 # save figures for later 
@@ -503,20 +528,21 @@ mixedCurvesAUC <- mixedCurves %>%
            type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", type),
            type = fct_relevel(as.factor(type), labOrder))
 
-mixedCurvesAUCPlot <- mixedCurvesAUC %>%
+mixedCurvesAUC %>%
     filter(n != "Otherwise") %>%
     ggplot(aes(x = as.numeric(n), y = AUC, color = type)) +
-    geom_point() + 
     geom_line() +
+    geom_point() + 
     xlab("Number of Species in Mixture") +
     ylab("Area Under the Curve") +
     ylim(c(0, 1)) +
     scale_color_discrete(name = NULL) +
-    facet_grid(PrOrRoc ~ orgResults)
+    facet_grid(fct_rev(PrOrRoc) ~ orgResults) +
+    theme(legend.key.size = unit(0.75, "lines"),
+          legend.margin = margin(t = -0.5, unit = "lines"),
+          legend.position = "bottom")
 
-mixedCurvesAUCPlot
-
-ggsave("../results/mixedCurvesAUCPlot.png", width = 6, height = 4)
+ggsave("../results/mixedCurvesAUCPlot.pdf", width = 105, height = 100, units = "mm", useDingbats = F)
 ```
 
 ### Plot Misclassifications  
