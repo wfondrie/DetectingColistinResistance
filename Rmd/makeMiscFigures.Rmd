@@ -84,22 +84,22 @@ specInfo %>%
   mutate(num = length(id)) %>%
   ungroup() %>%
   mutate(`Colistin\nResistant` = 
-           ifelse(Ab == "pos" | Kp == "pos", "+", NA),
+           ifelse(Ab == "pos" | Kp == "pos", "Colistin-Resistant", NA),
          `Colistin\nResistant` = 
-           ifelse(Ab == "neg" | Kp == "neg", "-", `Colistin\nResistant`),
+           ifelse(Ab == "neg" | Kp == "neg", "Colistin-Susceptible", `Colistin\nResistant`),
          `Colistin\nResistant` = fct_rev(`Colistin\nResistant`),
          species = fct_lump(species, 10),
          species = fct_reorder(species, num)) %>%
   ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
   geom_bar(color = "black") +
   ylab("Number of Mass Spectra") +
-  scale_fill_discrete(breaks = c("+","-")) +
+  scale_fill_discrete(breaks = c("Colistin-Resistant","Colistin-Susceptible")) +
   coord_flip() +
   theme(legend.position = c(0.95, 0.05),
         legend.justification = c(1,0),
         axis.title.y = element_blank())
 
-ggsave("../results/library.png", height = 3, width = 5)
+ggsave("../results/library.png", height = 50, width = 100, unit = "mm")
 
 summary(specInfo$species)
 length(unique(specInfo$species))
