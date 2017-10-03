@@ -25,6 +25,7 @@ library(devtools, quietly = T)
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
 source("../R/ggplotTheme.R")
+source("../R/createNewFeatureTbl.R")
 
 set.seed(6578548)
 tic()

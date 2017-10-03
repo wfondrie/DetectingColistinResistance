@@ -63,6 +63,16 @@ featurePlot <- specDat %>%
 featurePlot 
 ggsave("../results/featureSelect_1.pdf", width = 105, height = 100, unit = "mm", useDingbats = F)
 
+singlePlot <- specDat %>%
+    filter(str_detect(type, "res")) %>%
+    ggplot(aes(x = mz, y = relInt)) +
+    geom_line() +
+    xlab(expression(italic("m/z"))) +
+    ylab("Relative Intensity")
+
+singlePlot
+ggsave("../results/singlePlot.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
+
 selectedMz <- features$mz[which.min(abs(features$mz - 2033))] 
 
 maxDf <- specDat %>%

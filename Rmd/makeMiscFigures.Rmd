@@ -39,6 +39,8 @@ specInfo <- tibble(fname = files) %>%
            Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
            Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)))
 
+summary(specInfo)
+
 features <- readRDS("../temp/features.RDS")
 
 specList <- preProcessSpec(files, hws = 80) # Same preprocessing
@@ -91,6 +93,32 @@ specInfo %>%
          `Colistin\nResistant` = 
            ifelse(Ab == "neg" | Kp == "neg", "Colistin-Susceptible", `Colistin\nResistant`),
          `Colistin\nResistant` = fct_rev(`Colistin\nResistant`),
+         species = fct_lump(species, 20),
+         species = fct_reorder(species, num)) %>%
+  ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
+  geom_bar(color = "black", width = 0.75) +
+  ylab("Number of Mass Spectra") +
+  scale_fill_discrete(name = NULL, breaks = c("Colistin-Resistant","Colistin-Susceptible")) +
+  coord_flip() +
+  theme(legend.position = c(0.95, 0.25),
+        legend.justification = c(1,0),
+        axis.title.y = element_blank(),
+        legend.background = element_rect(color = "black"),
+        legend.key.size = unit(0.75, "lines"),
+        legend.title = element_blank())
+
+ggsave("../results/library.pdf", height = 125, width = 105, unit = "mm", useDingbats = F)
+
+
+specInfo %>% 
+  group_by(species) %>%
+  mutate(num = length(id)) %>%
+  ungroup() %>%
+  mutate(`Colistin\nResistant` = 
+           ifelse(Ab == "pos" | Kp == "pos", "Colistin-Resistant", NA),
+         `Colistin\nResistant` = 
+           ifelse(Ab == "neg" | Kp == "neg", "Colistin-Susceptible", `Colistin\nResistant`),
+         `Colistin\nResistant` = fct_rev(`Colistin\nResistant`),
          species = fct_lump(species, 10),
          species = fct_reorder(species, num)) %>%
   ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
@@ -102,11 +130,14 @@ specInfo %>%
         legend.justification = c(1,0),
         axis.title.y = element_blank(),
         legend.background = element_rect(color = "black"),
-        legend.key.size = unit(0.5, "lines"),
-        legend.title = element_blank())
+        legend.text = element_text(size = 10),
+        legend.key.size = unit(0.75, "lines"),
+        legend.title = element_blank(),
+        axis.text = element_text(size = 10),
+        axis.title.x = element_text(size = 10))
 
-ggsave("../results/library.pdf", height = 50, width = 105, unit = "mm", useDingbats = F)
+ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", useDingbats = F)
 
-summary(specInfo$species)
+ummary(specInfo$species)
 length(unique(specInfo$species))
 ```
