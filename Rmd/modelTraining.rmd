@@ -1,19 +1,23 @@
 ---
 title: "Training XGBoost Models"
+Author: "William E Fondrie"
 output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
 ```
 
 # Introduction  
-This file contains the code used to build the XGBoost machine learning models presented in [Fondrie et al.]()  
+This file contains the code used to build the XGBoost machine learning models.
 
 # Load Libraries & Prepare Workspace  
 ```{r loadLibraries}
 # data manipulation
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(stringr, quietly = T)
 library(forcats, quietly = T)
 

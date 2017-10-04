@@ -1,0 +1,106 @@
+---
+title: "Analysis of Experimentl Two-Species UTI Mixtures"
+output: github_document
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
+```
+ 
+```{r}
+# data manipulation
+suppressMessages(library(tidyverse, quietly = T))
+library(stringr, quietly = T)
+library(forcats, quietly = T)
+library(devtools, quietly = T)
+
+# handling MALDI spectra
+library(MALDIquant, quietly = T)
+library(MALDIquantForeign, quietly = T)
+
+# ggplot2 theme
+source("../R/ggplotTheme.R")
+theme_set(coolTheme)
+
+# import helper functions
+source("../R/preProcessSpec.R")
+source("../R/extract.R")
+source("../R/createNewFeatureTbl.R")
+
+featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
+```
+
+
+```{r}
+files <- list.files("../data/twoSpeciesMixtures", 
+                    full.names = T, 
+                    pattern = "mzXML$",
+                    recursive = T)
+
+fctOrder <- c("neg", "other", "pos")
+
+twoSpeciesSpecInfo <- tibble(fname = files) %>%
+    mutate(type = "twoSpeciesMixtures",
+           id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
+           Ab = ifelse(str_detect(id, "Ab_res"), "pos", "other"),
+           Kp = ifelse(str_detect(id, "Kp_res"), "pos", "other"),
+           Ab = as.factor(ifelse(str_detect(id, "Ab_sus"), "neg", Ab)),
+           Kp = as.factor(ifelse(str_detect(id, "Kp_sus"), "neg", Kp)),
+           percentEc = as.numeric(str_match(id, " (.+)Ec")[ , 2])) %>%
+    mutate(Ab = fct_relevel(Ab, fctOrder),
+           Kp = fct_relevel(Kp, fctOrder))
+
+saveRDS(twoSpeciesSpecInfo, file = "../temp/twoSpeciesSpecInfo.rds")
+
+
+features <- readRDS("../temp/features.RDS")
+
+specList <- preProcessSpec(files, hws = 80) # Same preprocessing
+
+spec <- map_df(specList, extractSpectra)
+
+trainIdx <- readRDS("../temp/trainIdx.rds")
+
+twoSpeciesDatList <- map(trainIdx,createNewFeatureTbl, 
+                         specDf = spec,
+                         summaryDat = twoSpeciesSpecInfo,
+                         mzTol = featTol,
+                         fileName = "twoSpeciesMixtures")
+
+saveRDS(twoSpeciesDatList, file = "../temp/twoSpeciesDatList.rds")
+```
+
+### Plot Spectra
+```{r}
+
+exampleSpec <- twoSpeciesSpecInfo %>%
+    mutate(percentTarget = 100 - percentEc,
+           percentLabs = as.factor(paste0(percentTarget, "%")),
+           percentLabs = fct_reorder(percentLabs, percentTarget),
+           targetOrg = NA,
+           targetOrg = ifelse(Ab != "other", "A. baumannii", targetOrg),
+           targetOrg = ifelse(Kp != "other", "K. pneumoniae", targetOrg)) %>%
+    filter(!is.na(targetOrg)) %>%
+    group_by(targetOrg, percentTarget) %>%
+    do(.[1, ])
+
+
+
+exampleSpec %>%
+    left_join(spec) %>%
+    ggplot(aes(x = mz, y = relInt*100)) + 
+    geom_line() +
+    facet_grid(percentLabs ~ targetOrg) +
+    ylab("Relative Intensity") +
+    xlab(expression(italic("m/z")))
+
+ggsave("../results/twoSpeciesMixtureSpectra.pdf", width = 200, height = 120, unit = "mm", useDingbats = F)
+```
+
+### Session Info
+```{r}
+session_info()
+```

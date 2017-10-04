@@ -1,5 +1,6 @@
 ---
-title: "R Notebook"
+title: "Evaluate XGBoost Models"
+Author: "William E Fondrie"
 output: github_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
@@ -12,7 +13,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide", fig.al
 ## Load Libraries & Prepare Workspace
 ```{r loadLibraries, results = "hide"}
 # data manipulation
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(stringr, quietly = T)
 library(forcats, quietly = T)
 
@@ -20,6 +21,9 @@ library(forcats, quietly = T)
 library(PRROC, quietly = T)
 library(caret, quietly = T)
 library(xgboost, quietly = T)
+
+# for session info
+library(devtools, quietly = T)
 
 # ggplot2 theme
 source("../R/ggplotTheme.R")
@@ -63,15 +67,9 @@ formatResults <- function(model, dataList) {
 abMod <- xgb.load(mods$Ab)
 abRes <- formatResults(abMod, testdmatList$Ab)
 
-abCm <- confusionMatrix(data = abRes$pred, reference = abRes$truth, positive = "pos")
-abCm
-
 # Ab PR curves
 abPosPR <- pr.curve(abRes$pos[abRes$truth == "pos"], 
                     abRes$pos[abRes$truth != "pos"], curve = T)
-
-abNegPR <- pr.curve(abRes$neg[abRes$truth == "neg"], 
-                    abRes$neg[abRes$truth != "neg"], curve = T)
 
 abSpeciesPR <- pr.curve(abRes$speciesVsOther[abRes$truth != "other"], 
                         abRes$speciesVsOther[abRes$truth ==  "other"], curve = T)
@@ -80,19 +78,10 @@ abSpeciesPR <- pr.curve(abRes$speciesVsOther[abRes$truth != "other"],
 abPosROC <- roc.curve(abRes$pos[abRes$truth == "pos"], 
                     abRes$pos[abRes$truth != "pos"], curve = T)
 
-abNegROC <- roc.curve(abRes$neg[abRes$truth == "neg"], 
-                    abRes$neg[abRes$truth != "neg"], curve = T)
-
 abSpeciesROC <- roc.curve(abRes$speciesVsOther[abRes$truth != "other"], 
                         abRes$speciesVsOther[abRes$truth ==  "other"], curve = T)
 
-abPrior <- abRes %>%
-    summarize(pos = sum(truth == "pos") / length(truth),
-              neg = sum(truth == "neg") / length(truth),
-              species = sum(truth != "other") / length(truth)) %>%
-    gather(type, Precision)
-
-
+saveRDS(abRes, file = "../temp/abRes.rds")
 ```
 
 ### Klebsiella pneumoniae
@@ -100,15 +89,9 @@ abPrior <- abRes %>%
 kpMod <- xgb.load(mods$Kp)
 kpRes <- formatResults(kpMod, testdmatList$Kp)
 
-kpCm <- confusionMatrix(data = kpRes$pred, reference = kpRes$truth, positive = "pos")
-kpCm
-
 # Kp PR curves
 kpPosPR <- pr.curve(kpRes$pos[kpRes$truth == "pos"], 
                     kpRes$pos[kpRes$truth != "pos"], curve = T)
-
-kpNegPR <- pr.curve(kpRes$neg[kpRes$truth == "neg"], 
-                    kpRes$neg[kpRes$truth != "neg"], curve = T)
 
 kpSpeciesPR <- pr.curve(kpRes$speciesVsOther[kpRes$truth != "other"], 
                         kpRes$speciesVsOther[kpRes$truth ==  "other"], curve = T)
@@ -117,17 +100,10 @@ kpSpeciesPR <- pr.curve(kpRes$speciesVsOther[kpRes$truth != "other"],
 kpPosROC <- roc.curve(kpRes$pos[kpRes$truth == "pos"], 
                     kpRes$pos[kpRes$truth != "pos"], curve = T)
 
-kpNegROC <- roc.curve(kpRes$neg[kpRes$truth == "neg"], 
-                    kpRes$neg[kpRes$truth != "neg"], curve = T)
-
 kpSpeciesROC <- roc.curve(kpRes$speciesVsOther[kpRes$truth != "other"], 
                         kpRes$speciesVsOther[kpRes$truth ==  "other"], curve = T)
 
-kpPrior <- kpRes %>%
-    summarize(pos = sum(truth == "pos") / length(truth),
-              neg = sum(truth == "neg") / length(truth),
-              species = sum(truth != "other") / length(truth)) %>%
-    gather(type, prior)
+saveRDS(kpRes, file = "../temp/kpRes.rds")
 ```
 
 ### Plot PR and ROC Curves
@@ -135,58 +111,60 @@ kpPrior <- kpRes %>%
 ```{r, AbPR, results="hold", fig.show="hold"}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
-prAb <- as.tibble(rbind(abPosPR$curve, abNegPR$curve, abSpeciesPR$curve))
+prAb <- as.tibble(rbind(abPosPR$curve, abSpeciesPR$curve))
 names(prAb) <- prnames
 
 labsAb <- c(paste0("Resistant\nAUC = ", sigRound(abPosPR$auc.integral, 3)),
-            paste0("Susceptible\nAUC = ", sigRound(abNegPR$auc.integral, 3)),
             paste0("Species\nAUC = ", sigRound(abSpeciesPR$auc.integral, 3)))
-
-abPrior$cond <- labsAb
 
 AbPrCurve <- prAb %>%
     mutate(cond = c(rep(labsAb[1], nrow(abPosPR$curve)),
-                    rep(labsAb[2], nrow(abNegPR$curve)),
-                    rep(labsAb[3], nrow(abSpeciesPR$curve))),
+                    rep(labsAb[2], nrow(abSpeciesPR$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), labsAb))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
     geom_path(size = 1)  +
-    geom_hline(data = abPrior, aes(yintercept = Precision, color = cond), linetype = "dashed", size = 1) +
     coord_equal() +
-    theme(#legend.position = c(0.05,0.05),
-          #legend.justification = c(0,0),
-          legend.title = element_blank()) +
-    ggtitle(expression(italic("A. baummannii")))
+    ylim(c(0, 1)) +
+    xlim(c(0, 1)) +
+    theme(legend.title = element_blank(),
+          legend.key.height = unit(1.2, "lines"),
+          legend.key.width = unit(0.6, "lines"),
+          legend.margin = margin(l = -0.5, unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
+    ggtitle(expression(italic("A. baumannii")))
 
 AbPrCurve
-ggsave("../results/AbPrCurve.png", width = 3.5, height = 3.5)
+ggsave("../results/AbPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 # ROC
-rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
-rocAb <- as.tibble(rbind(abPosROC$curve, abNegROC$curve, abSpeciesROC$curve))
+rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
+rocAb <- as.tibble(rbind(abPosROC$curve, 
+                         abSpeciesROC$curve))
 names(rocAb) <- rocnames
 
-roclabsAb <- c(paste0("Resistant, AUC = ", sigRound(abPosROC$auc, 3)),
-               paste0("Susceptible, AUC = ", sigRound(abNegROC$auc, 3)),
-               paste0("Species, AUC = ", sigRound(abSpeciesROC$auc, 3)))
+roclabsAb <- c(paste0("Resistant\nAUC = ", sigRound(abPosROC$auc, 3)),
+               paste0("Species\nAUC = ", sigRound(abSpeciesROC$auc, 3)))
 
 
 AbRocCurve <- rocAb %>%
     mutate(cond = c(rep(roclabsAb[1], nrow(abPosROC$curve)),
-                    rep(roclabsAb[2], nrow(abNegROC$curve)),
-                    rep(roclabsAb[3], nrow(abSpeciesROC$curve))),
+                    rep(roclabsAb[2], nrow(abSpeciesROC$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), roclabsAb))) %>%
-    ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
-    geom_path(size = 1)  +
+    ggplot(aes(x = `1 - Specificity (FPR)`, y = `Sensitivity (TPR)`, color = cond)) +
+    geom_abline(xintercept = 0, slope = 1) +
+    geom_path(size = 1) +
+    ylim(c(0, 1)) +
+    xlim(c(0, 1)) +
     coord_equal() +
-    theme(legend.position = c(0.95,0.05),
-          legend.justification = c(1,0),
-          legend.title = element_blank()) +
-    ggtitle(expression(italic("A. baummannii")))
+    theme(legend.title = element_blank(),
+          legend.key.height = unit(1.2, "lines"),
+          legend.key.width = unit(0.6, "lines"),
+          legend.margin = margin(l = -0.5, unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
+    ggtitle(expression(italic("A. baumannii")))
 
 AbRocCurve
-ggsave("../results/AbRocCurve.png", width = 3.5, height = 3.5)
-
+ggsave("../results/AbRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 ```
 
@@ -194,65 +172,110 @@ ggsave("../results/AbRocCurve.png", width = 3.5, height = 3.5)
 ```{r, KpPR, results = "hold", fig.show = "hold"}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
-prKp <- as.tibble(rbind(kpPosPR$curve, kpNegPR$curve, kpSpeciesPR$curve))
+prKp <- as.tibble(rbind(kpPosPR$curve, 
+                        kpSpeciesPR$curve))
 names(prKp) <- prnames
 
-labsKp <- c(paste0("Resistant, AUC = ", sigRound(kpPosPR$auc.integral, 3)),
-            paste0("Susceptible, AUC = ", sigRound(kpNegPR$auc.integral, 3)),
-            paste0("Species, AUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
+labsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosPR$auc.integral, 3)),
+            paste0("Species\nAUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
 
-KpPrCurve <- prKp %>%
+prKp %>%
     mutate(cond = c(rep(labsKp[1], nrow(kpPosPR$curve)),
-                    rep(labsKp[2], nrow(kpNegPR$curve)),
-                    rep(labsKp[3], nrow(kpSpeciesPR$curve))),
+                    rep(labsKp[2], nrow(kpSpeciesPR$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), labsKp))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
     geom_path(size = 1)  +
+    ylim(c(0, 1)) +
+    xlim(c(0, 1)) +
     coord_equal() +
-    theme(legend.position = c(0.05,0.05),
-          legend.justification = c(0,0),
-          legend.title = element_blank()) +
+    theme(legend.title = element_blank(),
+          legend.key.height = unit(1.2, "lines"),
+          legend.key.width = unit(0.6, "lines"),
+          legend.margin = margin(l = -0.5, unit = "lines"),
+          plot.title = element_text(margin = margin(b = -0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae")))
 
-KpPrCurve
-
-ggsave("../results/KpPrCurve.png", width = 3.5, height = 3.5)
+ggsave("../results/KpPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 # ROC
-rocnames <- c("1 - Specificity", "Sensitivity", "threshold")
-rocKp <- as.tibble(rbind(kpPosROC$curve, kpNegROC$curve, kpSpeciesROC$curve))
+rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
+rocKp <- as.tibble(rbind(kpPosROC$curve, 
+                         #kpNegROC$curve, 
+                         kpSpeciesROC$curve))
 names(rocKp) <- rocnames
 
-roclabsKp <- c(paste0("Resistant,AUC = ", sigRound(kpPosROC$auc, 3)),
-               paste0("Susceptible,AUC = ", sigRound(kpNegROC$auc, 3)),
-               paste0("Species, AUC = ", sigRound(kpSpeciesROC$auc, 3)))
+roclabsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosROC$auc, 3)),
+               paste0("Species\nAUC = ", sigRound(kpSpeciesROC$auc, 3)))
 
-KpRocCurve <- rocKp %>%
+rocKp %>%
     mutate(cond = c(rep(roclabsKp[1], nrow(kpPosROC$curve)),
-                    rep(roclabsKp[2], nrow(kpNegROC$curve)),
-                    rep(roclabsKp[3], nrow(kpSpeciesROC$curve))),
+                    rep(roclabsKp[2], nrow(kpSpeciesROC$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), roclabsKp))) %>%
-    ggplot(aes(x = `1 - Specificity`, y = Sensitivity, color = cond)) +
+    ggplot(aes(x = `1 - Specificity (FPR)`, y = `Sensitivity (TPR)`, color = cond)) +
+    geom_abline(xintercept = 0, slope = 1) +
     geom_path(size = 1) +
+    ylim(c(0, 1)) +
+    xlim(c(0, 1)) +
     coord_equal() + 
-    theme(legend.position = c(0.95,0.05),
-          legend.justification = c(1,0),
-          legend.title = element_blank())  +
+    theme(legend.title = element_blank(),
+          legend.key.height = unit(1.2, "lines"),
+          legend.key.width = unit(0.6, "lines"),
+          legend.margin = margin(l = -0.5, unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae")))
 
-KpRocCurve
-ggsave("../results/KpRocCurve.png", width = 3.5, height = 3.5)
-
-# save plots for later use:
-save(AbPrCurve, AbRocCurve, KpPrCurve, KpRocCurve, file = "../temp/curves.rda")
+ggsave("../results/KpRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 ```
 
-## Determine How Spectra Are Misclassified
-```{r misclassified}
-abCmTable <- as.tibble(abCm$table) %>% mutate(species = "Ab")
-kpCmTable <- as.tibble(kpCm$table) %>% mutate(species = "Kp")
+## New Confusion Matrices
+```{r misclassified, results='asis'}
+pickThold <- function(curve, minSens) {
+    dat <- as.data.frame(curve$curve)
+    dat <- dat[dat[ , 2] >= minSens, ]
+    dat <- dat[dat[ , 3] == max(dat[ , 3]), ]
+    names(dat) <- c("FPR", "TPR", "threshold")
+    
+    return(dat)
+} 
 
-cmTable <- abCmTable %>% full_join(kpCmTable)
+thold <- tibble(type = c("Ab_species", "Ab_resistant","Kp_species", "Kp_resistant"),
+                curves = list(abSpeciesROC, abPosROC, kpSpeciesROC, kpPosROC)) %>%
+    group_by(type) %>%
+    do(pickThold(curve = .$curves[[1]], 0.97))
+
+abRes2 <- abRes %>% 
+    mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Ab_resistant"],
+                            "pos", "neg"),
+           posTruth = ifelse(truth == "pos", "pos", "neg"),
+           specPred = ifelse(speciesVsOther >= thold$threshold[thold$type == "Ab_species"],
+                              "Ab", "other"),
+           specTruth = ifelse(truth != "other", "Ab", "other"))
+
+# Ab Species
+confusionMatrix(data = abRes2$specPred, reference = abRes2$specTruth, 
+                positive = "Ab", mode = "everything")
+
+# Colistin-Resistant Ab
+confusionMatrix(data = abRes2$posPred, reference = abRes2$posTruth, 
+                positive = "pos", mode = "everything")
+
+
+kpRes2 <- kpRes %>%
+    mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Kp_resistant"],
+                            "pos", "neg"),
+           posTruth = ifelse(truth == "pos", "pos", "neg"),
+           specPred = ifelse(speciesVsOther >= thold$threshold[thold$type == "Kp_species"],
+                             "Kp", "other"),
+           specTruth = ifelse(truth != "other", "Kp", "other"))
+
+# Kp Species
+confusionMatrix(data = kpRes2$specPred, reference = kpRes2$specTruth, 
+                positive = "Kp", mode = "everything")
+
+# Colistin-Resistant Kp
+confusionMatrix(data = kpRes2$posPred, reference = kpRes2$posTruth, 
+                positive = "pos", mode = "everything")
+
 
 ```
 
@@ -265,58 +288,68 @@ vImpKp <- xgb.importance(colnames(testdmatList$Kp$dat), model = kpMod) %>%
     mutate(org = "Kp")
 
 basePeaks <- c("1912.5448", # Ab
-               "1841.4497")
+               "1841.4497", # Kp
+               "1826.3531",
+               "2080.3158")
 resPeaks <- c("2036.4927", # Ab
+              "1957.0536",
               "1957.1088", # Kp
-              "1973.1961")
+              "1973.1961",
+              "1895.7716")
 
 vImp <- vImpAb %>%
     full_join(vImpKp) %>%
     mutate(featureMz = as.factor(str_replace(Feature, "mz", "")),
            featureMz = fct_reorder(featureMz, Gain, .desc = T),
-           color = ifelse(featureMz %in% basePeaks, "Known Base Lipid A Structure", NA),
-           color = ifelse(featureMz %in% resPeaks, "Known Resistance Lipid A Structure", color)) %>%
+           color = ifelse(featureMz %in% basePeaks, "Base Lipid A Structure", NA),
+           color = ifelse(featureMz %in% resPeaks, "Resistance Lipid A Structure", color)) %>%
     group_by(org) %>%
     arrange(desc(Gain)) %>%
     filter(Gain >= Gain[20])
 
 # Acinetobacter
-vImpAbPlot <- vImp %>%
+vImp %>%
     filter(org == "Ab") %>%
     ggplot(aes(x = featureMz, y = Gain, ymax = Gain, ymin = 0)) +
-    geom_linerange(size = 1) +
+    geom_linerange(size = 0.75) +
     geom_point(size = 2, aes(color = color)) +
     xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
-    scale_color_discrete(breaks = c("Known Base Lipid A Structure", "Known Resistance Lipid A Structure")) +
+    scale_color_discrete(breaks = c("Base Lipid A Structure", "Resistance Lipid A Structure")) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
-          legend.position = c(0.95, 0.95),
+          legend.position = c(0.996, 0.992),
           legend.justification = c(1, 1),
-          legend.title = element_blank()) +
-    ggtitle(expression(italic("A. baummannii")))
+          legend.title = element_blank(),
+          legend.background = element_rect(color = "black"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(t = 0, b = 0.2, l = 0.2, r = 0.2,  unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
+    ggtitle(expression(italic("A. baumannii")))
 
-vImpAbPlot
-ggsave("../results/vImpAbPlot.png", height = 3, width = 4)
+ggsave("../results/vImpAbPlot.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+
+saveRDS(vImpAb, "../temp/vImpAb.rds")
 
 # Klebsiella
-vImpKpPlot <- vImp %>%
+vImp %>%
     filter(org == "Kp") %>%
     ggplot(aes(x = featureMz, y = Gain, ymax = Gain, ymin = 0)) +
-    geom_linerange(size = 1) +
+    geom_linerange(size = 0.75) +
     geom_point(size = 2, aes(color = color)) +
     xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
-    scale_color_discrete(breaks = c("Known Base Lipid A Structure", "Known Resistance Lipid A Structure")) +
+    scale_color_discrete(breaks = c("Base Lipid A Structure", "Resistance Lipid A Structure")) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
-          legend.position = c(0.95, 0.95),
+          legend.position = c(0.996, 0.992),
           legend.justification = c(1, 1),
-          legend.title = element_blank()) +
+          legend.title = element_blank(),
+          legend.background = element_rect(color = "black"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(t = 0, b = 0.2, l = 0.2, r = 0.2,  unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae")))
 
-vImpKpPlot
-ggsave("../results/vImpKpPlot.png", height = 3, width = 4)
+ggsave("../results/vImpKpPlot.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
-# save for later
-save(vImpAbPlot, vImpKpPlot, file = "../temp/vImpPlots.rda")
-
+saveRDS(vImpKp, "../temp/vImpKp.rds")
 ```
 
 ## Performance on Simulated Mixture Spectra  
@@ -338,46 +371,36 @@ mixedAbRes <- formatResults(abMod, mixedDmatList$Ab) %>%
     mutate(orgResults = "A. baumannii") %>%
     as_tibble(.)
 
-mixedAbCm <- confusionMatrix(data = mixedAbRes$pred, reference = mixedAbRes$truth, positive = "pos")
-mixedAbCm
-
-
 mixedAbPRall <- mixedAbRes %>%
     group_by(orgResults) %>%
     do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T),
        rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
     mutate(prPosAUC = prPos$auc.integral,
-           prNegAUC = prNeg$auc.integral,
            prSpeciesAUC = prSpecies$auc.integral,
            rocPosAUC = rocPos$auc,
-           rocNegAUC = rocNeg$auc,
            rocSpeciesAUC = rocSpecies$auc,
            n = "Overall")
 
 mixedAbPRByn <- mixedAbRes %>%
     group_by(orgResults, n) %>%
     do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T),
        rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
     mutate(prPosAUC = prPos$auc.integral,
-           prNegAUC = prNeg$auc.integral,
            prSpeciesAUC = prSpecies$auc.integral,
            rocPosAUC = rocPos$auc,
-           rocNegAUC = rocNeg$auc,
            rocSpeciesAUC = rocSpecies$auc)
 
 mixedAbCurves <- mixedAbPRall %>% rbind(mixedAbPRByn)
+
+saveRDS(mixedAbRes, file = "../temp/mixedAbRes.rds")
 ```
 
 ### Klebsiella pneumoniae
@@ -388,48 +411,39 @@ mixedKpRes <- formatResults(kpMod, mixedDmatList$Kp) %>%
     mutate(orgResults = "K. pneumoniae") %>%
     as_tibble(.)
 
-mixedKpCm <- confusionMatrix(data = mixedKpRes$pred, reference = mixedKpRes$truth, positive = "pos")
-mixedKpCm
-
 mixedKpAll <- mixedKpRes %>%
     group_by(orgResults) %>%
     do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T),
        rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
     mutate(prPosAUC = prPos$auc.integral,
-           prNegAUC = prNeg$auc.integral,
            prSpeciesAUC = prSpecies$auc.integral,
            rocPosAUC = rocPos$auc,
-           rocNegAUC = rocNeg$auc,
            rocSpeciesAUC = rocSpecies$auc,
            n = "Overall")
 
 mixedKpByn <- mixedKpRes %>%
     group_by(orgResults, n) %>%
     do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T),
        rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
     mutate(prPosAUC = prPos$auc.integral,
-           prNegAUC = prNeg$auc.integral,
            prSpeciesAUC = prSpecies$auc.integral,
            rocPosAUC = rocPos$auc,
-           rocNegAUC = rocNeg$auc,
            rocSpeciesAUC = rocSpecies$auc)
 
 mixedKpCurves <- mixedKpAll %>% rbind(mixedKpByn)
 
 # All PR and ROC results
 mixedCurves <- mixedKpCurves %>% rbind(mixedAbCurves)
+
+saveRDS(mixedKpRes, file = "../temp/mixedKpRes.rds")
 ```
 
 ### Plot PR and ROC curves for Simulated Mixtures by Number of Spectra in Mixture
@@ -443,46 +457,53 @@ mixedCurveDat <- mixedCurves %>%
     unnest(curveDf) %>%
     rename("Rec_Spec" = V1, "Prec_Sens" = V2, "Threshold" = V3) %>%
     mutate(PrOrRoc = ifelse(str_detect(curveType, "pr"), "PR", "ROC"),
-           type = ifelse(str_detect(curveType, "Neg"), "Colistin-Susceptible", "Species"),
-           type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", type),
+           type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", "Species"), #type),
            type = as.factor(type))
 
-prCurves <- mixedCurveDat %>%
+mixedCurveDat %>%
     filter(PrOrRoc == "PR") %>%
     ggplot(aes(x = Rec_Spec, y = Prec_Sens, color = n)) +
-    geom_path(size = 1) +
+    geom_path() +
     coord_equal() +
     facet_grid(orgResults ~ type) +
     xlab("Recall") +
     ylab("Precision") +
-    scale_color_discrete(name = "Number of\nSpecies")
-prCurves
+    ylim(0, 1) +
+    xlim(0, 1) +
+    scale_color_discrete(name = "Number of Species") +
+    theme(legend.key.size = unit(0.75, "lines"),
+          legend.margin = margin(t = -0.5, unit = "lines"),
+          legend.position = "bottom",
+          axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
-ggsave("../results/mixturePRCurves.png", width = 8, height = 5)
+ggsave("../results/mixturePRCurves.pdf", width = 70, height = 80, units = "mm", useDingbats = F)
 
 
-rocCurves <- mixedCurveDat %>%
+mixedCurveDat %>%
     filter(PrOrRoc == "ROC") %>%
     ggplot(aes(x = Rec_Spec, y = Prec_Sens, color = n)) +
-    geom_path(size = 1) +
+    geom_abline(xintercept = 0, slope = 1) +
+    geom_path() +
     coord_equal() +
     facet_grid(orgResults ~ type) +
-    xlab("1 - Specificity") +
-    ylab("Sensitivity") +
-    scale_color_discrete(name = "Number of\nSpecies")
-rocCurves
+    xlab("1 - Specificity (FPR)") +
+    ylab("Sensitivity (TPR)") +
+    ylim(0, 1) +
+    xlim(0, 1) +
+    scale_color_discrete(name = "Number of Species") +
+    theme(legend.key.size = unit(0.75, "lines"),
+          legend.margin = margin(t = -0.5, unit = "lines"),
+          legend.position = "bottom",
+          axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
-ggsave("../results/mixtureROCCurves.png", width = 8, height = 5)
-
-
-# save figures for later 
-save(prCurves, rocCurves, file = "../temp/curves.rda")
+ggsave("../results/mixtureROCCurves.pdf", width = 70, height = 80, units = "mm", useDingbats = F)
 ```
 
 
 ### Plot the AUC of PR and ROC Curves With Increasing Matrix Complexity  
 ```{r, fig.width = 6}
-labOrder <- c("Species", "Colistin-Susceptible", "Colistin-Resistant")
+labOrder <- c("Species", 
+              "Colistin-Resistant")
 
 mixedCurvesAUC <- mixedCurves %>%
     select(ends_with("AUC"), n, orgResults) %>%
@@ -495,69 +516,185 @@ mixedCurvesAUC <- mixedCurves %>%
 mixedCurvesAUC %>%
     filter(n != "Otherwise") %>%
     ggplot(aes(x = as.numeric(n), y = AUC, color = type)) +
-    geom_point() + 
     geom_line() +
+    geom_point() + 
     xlab("Number of Species in Mixture") +
     ylab("Area Under the Curve") +
     ylim(c(0, 1)) +
+    coord_fixed(ratio = 4) +
     scale_color_discrete(name = NULL) +
-    facet_grid(PrOrRoc ~ orgResults)
+    facet_grid(fct_rev(PrOrRoc) ~ orgResults) +
+    theme(legend.key.size = unit(0.75, "lines"),
+          legend.margin = margin(t = -0.5, unit = "lines"),
+          legend.position = "bottom")
+
+ggsave("../results/mixedCurvesAUCPlot.pdf", width = 70, height = 80, units = "mm", useDingbats = F)
 ```
 
-### Plot Misclassifications  
-#### Amount of False Negatives by Mixture Coefficient
-```{r, fig.width = 6}
-mixedRes <- mixedKpRes %>% 
-    full_join(mixedAbRes) %>%
-    filter(n %in% c(2:5),  truth != "other") %>%
-    mutate(correctRes = truth == pred,
-           correctSpecies = speciesVsOther > 0.3,
-           coeff = ifelse(orgResults == "A. baumannii", AbCoeff, KpCoeff)) %>%
-    select(orgResults, correctRes, correctSpecies, truth, pred, coeff) %>%
-    group_by(coeff) %>%
-    summarize(res = sum(correctRes)/length(correctRes),
-              species = sum(correctSpecies)/length(correctSpecies))
-
-resDensity <- mixedRes %>%
-    ggplot(aes(x = coeff, fill = correctRes)) +
-    geom_histogram() +
-    facet_grid(. ~ orgResults)
-resDensity
+```{r}
+mixedAbRes <- mixedAbRes %>%
+    mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Ab_resistant"],
+                            "pos", "neg"),
+           posTruth = ifelse(truth == "pos", "pos", "neg"),
+           specPred = ifelse(speciesVsOther >= thold$threshold[thold$type == "Ab_species"],
+                             "Ab", "other"),
+           specTruth = ifelse(truth != "other", "Ab", "other"))
 
 
-speciesDensity <- mixedRes %>%
-    ggplot(aes(x = coeff, fill = correctSpecies)) +
-    geom_histogram() +
-    facet_grid(. ~ orgResults)
-speciesDensity
+mixedKpRes <- mixedKpRes %>%
+    mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Kp_resistant"],
+                            "pos", "neg"),
+           posTruth = ifelse(truth == "pos", "pos", "neg"),
+           specPred = ifelse(speciesVsOther >= thold$threshold[thold$type == "Kp_species"],
+                             "Kp", "other"),
+           specTruth = ifelse(truth != "other", "Kp", "other"))
 
-```
 
-#### Most Common False Positive Signatures
-```{r, results = "hide"}
-fpRes <- mixedKpRes %>% 
-    full_join(mixedAbRes) %>%
-    filter(truth == "pos", pred != "pos") %>%
-    rename(spec_id = id) %>%
-    select(orgResults, spec_id) %>%
-    group_by(orgResults) %>%
-    mutate(total = length(spec_id)) %>%
-    left_join(mixedComponents) %>%
-    group_by(orgResults, species, total) %>%
-    summarize(num = length(species)) %>%
-    arrange(desc(num))
-
-fpSpec <- mixedKpRes %>% 
-    full_join(mixedAbRes) %>%
-    filter(truth == "other", speciesVsOther > 0.5) %>%
-    rename(spec_id = id) %>%
-    select(orgResults, spec_id) %>%
-    group_by(orgResults) %>%
-    mutate(total = length(spec_id)) %>%
-    left_join(mixedComponents) %>%
-    group_by(orgResults, species, total) %>%
-    summarize(num = length(species)) %>%
-    arrange(desc(num))
+specStats <- function(resDf, posClass) {
+    d1 <- map_df(1:5, function(n) {
+        cm <- confusionMatrix(data = resDf$specPred[resDf$n == n], 
+                              reference = resDf$specTruth[resDf$n == n], 
+                              positive = posClass, mode = "everything")
+        
+        data.frame(as.list(c(cm$overall, cm$byClass)))
+    })
     
+    cm2 <- confusionMatrix(data = resDf$specPred, 
+                           reference = resDf$specTruth, 
+                           positive = posClass, mode = "everything")
+    
+    ret <- rbind(data.frame(as.list(c(cm2$overall, cm2$byClass))), d1)
+    ret$n <- c("Overall", 1, 2, 3, 4, 5)
+    
+    return(ret)
+}
+
+# Ab Species
+specStats(mixedAbRes, "Ab")
+
+# Kp Species
+specStats(mixedKpRes, "Kp")
+
+
+resStats <- function(resDf, posClass = "pos") {
+    d1 <- map_df(1:5, function(n) {
+        cm <- confusionMatrix(data = resDf$posPred[resDf$n == n], 
+                              reference = resDf$posTruth[resDf$n == n], 
+                              positive = posClass, mode = "everything")
+        
+        data.frame(as.list(c(cm$overall, cm$byClass)))
+    })
+    
+    cm2 <- confusionMatrix(data = resDf$posPred, 
+                           reference = resDf$posTruth, 
+                           positive = posClass, mode = "everything")
+    
+    ret <- rbind(data.frame(as.list(c(cm2$overall, cm2$byClass))), d1)
+    ret$n <- c("Overall", 1, 2, 3, 4, 5)
+    
+    return(ret)
+}
+
+# Ab Species
+resStats(mixedAbRes)
+
+# Kp Species
+resStats(mixedKpRes)
+
+```
+
+### Real Two Species Mixtures
+```{r}
+# Import simulated mixture spectra features and information
+twoSpeciesSumm <- readRDS("../temp/twoSpeciesSpecInfo.rds")
+
+twoSpeciesList <- readRDS("../temp/twoSpeciesDatList.rds")
+
+twoSpeciesDmatList <- prepareData(twoSpeciesList, orgLabs = c("Ab", "Kp"))
+
+# predict 
+twoAbRes <- formatResults(abMod, twoSpeciesDmatList$Ab) %>%
+    cbind(., twoSpeciesList$Ab) %>%
+    select(-starts_with("mz"))%>%
+    mutate(orgResults = "A. baumannii",
+           percentTarget = ifelse(truth == "other", 0, 100 - percentEc),
+           Colistin = ifelse(percentTarget > 0 & truth != "other", as.character(truth), NA),
+           Colistin = str_replace(Colistin, "pos", "resistant"),
+           Colistin = str_replace(Colistin, "neg", "susceptible")) %>%
+    as_tibble(.)
+
+twoKpRes <- formatResults(kpMod, twoSpeciesDmatList$Kp) %>%
+    cbind(., twoSpeciesList$Kp) %>%
+    select(-starts_with("mz"))%>%
+    mutate(orgResults = "K. pneumoniae",
+           percentTarget = ifelse(truth == "other", 0, 100 - percentEc),
+           Colistin = ifelse(percentTarget > 0 & truth != "other", as.character(truth), NA),
+           Colistin = str_replace(Colistin, "pos", "resistant"),
+           Colistin = str_replace(Colistin, "neg", "susceptible")) %>%
+    as_tibble(.)
+
+
+twoRes <- twoAbRes %>% 
+    full_join(twoKpRes) %>%
+    mutate(Colistin = fct_rev(as.factor(Colistin)))
+
+saveRDS(twoAbRes, file = "../temp/twoAbRes.rds")
+saveRDS(twoKpRes, file = "../temp/twoKpRes.rds")
+```
+
+#### Plot scores vs cutoff
+```{r}
+tholdSpecies <- thold %>%
+    filter(str_detect(type, "species")) %>%
+    mutate(orgResults = ifelse(str_detect(type, "Ab"),
+                               "A. baumannii",
+                               "K. pneumoniae"))
+
+twoRes %>%
+    ggplot(aes(x = as.factor(percentTarget), y = speciesVsOther, fill = Colistin)) +
+    geom_hline(data = tholdSpecies, aes(yintercept = threshold), 
+               size = 1, linetype = "dashed") +
+    geom_jitter(width = 0.25, shape = 21) +
+    facet_wrap(~orgResults, ncol = 2) +
+    scale_fill_discrete(breaks = c("resistant", "susceptible")) +
+    xlab("Percent Target Species by Volume") +
+    ylab("Species Score") +
+    theme(legend.key.size = unit(0.75, "lines"),
+          legend.margin = margin(t = -0.5, unit = "lines"),
+          legend.position = "bottom") +
+    ylim(c(0, 1))
+
+ggsave("../results/twoSpeciesSpecRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)
+
+
+tholdRes <- thold %>%
+    filter(str_detect(type, "res")) %>%
+    mutate(orgResults = ifelse(str_detect(type, "Ab"),
+                               "A. baumannii",
+                               "K. pneumoniae"))
+
+
+twoRes %>%
+    ggplot(aes(x = as.factor(percentTarget), y = pos, fill = Colistin)) +
+    geom_hline(data = tholdRes, aes(yintercept = threshold), 
+               size = 1, linetype = "dashed") +
+    geom_jitter(width = 0.25, shape = 21) +
+    facet_wrap(~orgResults, ncol = 2) +
+    scale_fill_discrete(breaks = c("resistant", "susceptible")) +
+    xlab("Percent Target Species by Volume") +
+    ylab("Colistin-Resistance Score") +
+    theme(legend.key.size = unit(0.75, "lines"),
+          legend.margin = margin(t = -0.5, unit = "lines"),
+          legend.position = "bottom") +
+    ylim(c(0, 1))
+
+ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)
+    
+
+```
+
+### Session Info  
+```{r}
+session_info()
 ```
 

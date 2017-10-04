@@ -1,0 +1,87 @@
+---
+title: "Write Supplementary Tables"
+Author: "William E Fondrie"
+output: github_document
+---
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
+```
+
+```{r loadLibraries, results = "hide"}
+# data manipulation
+suppressMessages(library(tidyverse, quietly = T))
+library(stringr, quietly = T)
+library(forcats, quietly = T)
+library(devtools)
+
+# writing to excel files
+library(openxlsx, quietly = T)
+
+# other functions
+source("../R/utilityFunctions.R")
+
+# for reproducibility
+set.seed(937426)
+```
+
+
+### Supplementary Table 1  
+
+```{r}
+testList <- readRDS("../temp/testDatList.rds")
+abRes <- readRDS("../temp/abRes.rds")
+kpRes <- readRDS("../temp/kpRes.rds")
+
+createTbl <- function(summDf, resDf) {
+    
+    summDf %>%
+    cbind(resDf) %>%
+    mutate(Class = ifelse(truth == "pos", "Colistin-Resistant", "Other Species"),
+           Class = ifelse(truth == "neg", "Colistin-Susceptible", Class),
+           type = str_replace(type, " - .+$", ""),
+           type = str_replace(type, " [^ ]*[0-9].*$", "")) %>%
+    rename(Species = type, 
+           `Colistin-Resistant Score` = pos,
+           `Colistin-Susceptible Score` = neg,
+           `Other Species Score` = other,
+           `Species Score` = speciesVsOther,
+           `Susceptible or Other Species Score` = posVsAll) %>%
+    select(Species,
+           Class,
+           `Colistin-Resistant Score`,
+           `Colistin-Susceptible Score`,
+           `Other Species Score`,
+           `Species Score`,
+           `Susceptible or Other Species Score`,
+           starts_with("mz"))
+    
+}
+
+abTest <- createTbl(testList$Ab, abRes)
+kpTest <- createTbl(testList$Kp, kpRes)
+
+testSetRes <- list(`A. baumannii Test Set` = abTest,
+                   `K. pneumoniae Test Set` = kpTest)
+
+write.xlsx(testSetRes, "../results/testSetResults.xlsx")
+
+```
+
+### Supplementary Table 2
+```{r}
+mixedSumm <- readRDS("../temp/complexSpectraSummary.rds")
+mixedComponents <- readRDS("../temp/complexComponents.rds")
+
+mixedList <- readRDS("../temp/mixtureDatList.rds")
+```
+
+
+### Supplementary Table 4
+
+### Session Info
+```{r}
+session_info()
+```

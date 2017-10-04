@@ -1,12 +1,14 @@
 ---
 title: "Simulating Glycolipid MALDI-TOF-MS of Complex Samples"
 Author: "William E Fondrie"
-Date: "7/20/17"
 output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
 ```
 
 # Introduction 
@@ -14,7 +16,7 @@ This file contains the code to simulate glycolipid MALDI-TOF mass spectra of org
 
 # Load Libraries & Prepare Workspace
 ```{r loadLibraries}
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(MALDIquant, quietly = T)
 library(MALDIquantForeign, quietly = T)
 library(stringr, quietly = T)
@@ -25,6 +27,7 @@ library(devtools, quietly = T)
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
 source("../R/ggplotTheme.R")
+source("../R/createNewFeatureTbl.R")
 
 set.seed(6578548)
 tic()
@@ -76,7 +79,6 @@ selectLinearCombos <- function(n, info) {
         sample_n(size = 1) %>%
         ungroup() %>%
         sample_frac(size = 1) %>%
-        #mutate(coeff = c(1, runif(n-1, 0.1, 1))) # mixed with coefficients [0.1, 1]
         mutate(coeff = c(1, sample(c(1, 0.5, 0.25, 0.1), n-1, replace = T)))
     
     return(selected)
@@ -148,8 +150,6 @@ saveRDS(comboSpec, "../temp/comboSpec.rds")
 
 trainIdx <- readRDS("../temp/trainIdx.rds")
 
-# comboSummary <- readRDS("../temp.remote/complexSpectraSummary.rds")
-# comboSpec <- readRDS("../temp.remote/comboSpec.rds")
 
 createMixtureFeatureTbl <- function(trainList, specDf, summaryDat, mzTol) {
     suffix <- if(str_detect(trainList$regex, "Acineto")) "_Ab" else "_Kp"

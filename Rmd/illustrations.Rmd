@@ -1,33 +1,38 @@
 ---
 title: "Strategy Illustrations"
+Author: "William E Fondrie"
 output: github_document
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
 ```
 
 ```{r loadLibraries, results = "hide", echo = FALSE}
-library(plyr, quietly = T)
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(MALDIquant, quietly = T)
 library(MALDIquantForeign, quietly = T)
 library(caret, quietly = T)
 library(PRROC, quietly = T)
 library(stringr, quietly = T)
 library(forcats, quietly = T)
-library(cowplot)
+library(devtools, quietly = T)
+
+# ggplot2 theme
+source("../R/ggplotTheme.R")
+theme_set(coolTheme)
 
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
-source("../R/ggplotTheme.R")
 
-#set.seed(1832939)# For reproducibility
 set.seed(6554)
 
 ```
 
-# Feature Creation
+## Feature Creation
 
 ```{r}
 features <- readRDS("../temp/features.rds")
@@ -45,22 +50,33 @@ featFiles <- c(list.files("../data/fullLib/Acinetobacter baumannii - res",
 spec <- preProcessSpec(featFiles, hws = 80)
 
 specDat <- map_df(spec, extractSpectra) %>%
-    mutate(class = gsub("Acinetobacter baumannii", "Ab", type),
-           class = gsub("- res", "resistant", class),
-           class = gsub("- sen", "susceptible", class),
+    mutate(class = str_replace(type, "Acinetobacter", "A."),
+           class = str_replace(class, " - res", " EAS004, Colistin-Resistant"),
+           class = str_replace(class, " - sen", " EAS001, Colistin-Susceptible"),
            relInt = relInt * 100)
 
 
 featurePlot <- specDat %>%
     ggplot(aes(x = mz, y = relInt)) +
+    geom_segment(data = features, aes(x = mz, xend = mz, y = -1, yend = -10), 
+                 color = ggColors(3)[3]) +
     geom_line() +
-    geom_point(data = features, aes(x = mz), y = -3, color = "blue", shape = 73, size = 3) +
-    coolTheme +
-    facet_wrap(~ class, ncol = 2) +
-    xlab("m/z") +
+    facet_wrap(~ class, nrow = 2) +
+    xlab(expression(italic("m/z"))) +
     ylab("Relative Intensity")
 
-ggsave("../results/featureSelect_1.png", width = 8, height = 3)
+featurePlot 
+ggsave("../results/featureSelect_1.pdf", width = 105, height = 100, unit = "mm", useDingbats = F)
+
+singlePlot <- specDat %>%
+    filter(str_detect(type, "res")) %>%
+    ggplot(aes(x = mz, y = relInt)) +
+    geom_line() +
+    xlab(expression(italic("m/z"))) +
+    ylab("Relative Intensity")
+
+singlePlot
+ggsave("../results/singlePlot.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
 
 selectedMz <- features$mz[which.min(abs(features$mz - 2033))] 
 
@@ -71,34 +87,46 @@ maxDf <- specDat %>%
     summarize(mz = mz[relInt == max(relInt)],
               relInt = max(relInt))
 
-featurePlotZoom <- specDat %>%
+featurePlotZoom1 <- specDat %>%
+    filter(str_detect(class, "Resistant")) %>%
     ggplot(aes(x = mz, y = relInt)) +
     annotate("rect", xmin = selectedMz - 1.5, xmax = selectedMz + 1.5, 
-             ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "blue", color = "blue") +
+             ymin = -Inf, ymax = Inf, alpha = 0.1, fill = ggColors(3)[3], color = ggColors(3)[3]) +
+    geom_vline(data = features,  aes(xintercept = mz), color = ggColors(3)[3], linetype = "dashed") +
     geom_line() +
-    geom_vline(data = features, aes(xintercept = mz), color = "blue", linetype = "dashed") +
-    geom_point(data = maxDf, aes(x = mz, y = relInt + 1.5), color = "black", shape = 8, size = 2) + 
-    #coolTheme +
-    facet_wrap(~ class, ncol = 2) +
+    geom_point(data = filter(maxDf, str_detect(class, "Resistant")), 
+               aes(x = mz, y = relInt + 2), color = "black", shape = 8, size = 0.5) + 
     xlim(selectedMz + c(-5, 5)) +
     ylim(c(0, 35)) +
-    xlab(expression(italic("m/z"))) +
-    ylab("Relative Intensity")
+    theme(axis.title = element_blank())
 
-save_plot("../results/featureSelect_2.png", p,  base_width = 6, base_height = 3)
+featurePlotZoom1
 
-maxDf %>%
-    ggplot(aes(x = class, y = relInt)) +
-    geom_bar(stat = "identity") +
-    coolTheme +
-    theme(axis.title.x = element_blank()) +
-    ylab("Feature Intensity")
+ggsave("../results/featureSelect_2_1.pdf",  width = 30, height = 20, unit = "mm", useDingbats = F)
 
-ggsave("../results/featureSelect_3.png", width = 3, height = 2)
+
+# Zoom 2
+featurePlotZoom2 <- specDat %>%
+    filter(str_detect(class, "Susceptible")) %>%
+    ggplot(aes(x = mz, y = relInt)) +
+    annotate("rect", xmin = selectedMz - 1.5, xmax = selectedMz + 1.5, 
+             ymin = -Inf, ymax = Inf, alpha = 0.1, fill = ggColors(3)[3], color = ggColors(3)[3]) +
+    geom_vline(data = features,  aes(xintercept = mz), color = ggColors(3)[3], linetype = "dashed") +
+    geom_line() +
+    geom_point(data = filter(maxDf, str_detect(class, "Susceptible")), 
+               aes(x = mz, y = relInt + 2), color = "black", shape = 8, size = 0.5) + 
+    xlim(selectedMz + c(-5, 5)) +
+    ylim(c(0, 35)) +
+    theme(axis.title = element_blank())
+
+featurePlotZoom2
+
+ggsave("../results/featureSelect_2_2.pdf",  width = 30, height = 20, unit = "mm", useDingbats = F)
+
 ```
 
 
-# Real vs Simulated Complex Spectra
+## Real vs Simulated Mixture Spectra
 
 ```{r}
 
@@ -143,15 +171,15 @@ spPlot <- specDat %>%
 
 spPlot %>%
   ggplot(aes(x = as.numeric(mz), y = relInt)) +
-  geom_line(size = 0.5) +
-  geom_line(data = spPlot[!is.na(spPlot$mzRange), ], aes(color = mzRange), size = 0.5) +
+  geom_line(size = 0.25) +
+  geom_line(data = spPlot[!is.na(spPlot$mzRange), ], aes(color = mzRange), size = 0.30) +
   coolTheme +
   theme(legend.position = "none") +
-  labs(x = "m/z",
+  labs(x = expression(italic("m/z")),
        y = "Relative Intensity") +
   facet_wrap(~ spc, ncol = 1)
 
-ggsave("../results/individualSpec.png", width = 4, height = 4)
+ggsave("../results/individualSpec.pdf", width = 105, height = 100, unit = "mm", useDingbats = F)
 
 
  # Make combined Spectrum ----------------------------------------------------------------------
@@ -180,15 +208,14 @@ cmbSpecNorm <-  cmbSpec %>%
 
 cmbSpecNorm %>%
   ggplot(aes(x = as.numeric(mz), y = relInt)) +
-  geom_line(size = 0.5) +
-  geom_line(data = cmbSpecNorm[!is.na(cmbSpecNorm$mzRange), ], aes(color = mzRange), size = 0.5) +
-  coolTheme +
+  geom_line(size = 0.25) +
+  geom_line(data = cmbSpecNorm[!is.na(cmbSpecNorm$mzRange), ], aes(color = mzRange), size = 0.30) +
   theme(legend.position = "none") +
   labs(title = "Simulated",
-       x = "m/z",
+       x = expression(italic("m/z")),
        y = "Relative Intensity")
 
-ggsave("../results/inSilicoSpec.png", width = 4, height = 2.25)
+ggsave("../results/inSilicoSpec.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
 
 # Import and plot experimental mixed spectrum --------------------------------------------------------
 mixFile <- list.files("../data/mixSpec", pattern = ".mzXML", full.names = T)[1]
@@ -211,142 +238,84 @@ origSpecNorm <- origSpecDat %>%
 
 origSpecNorm %>%
   ggplot(aes(x = as.numeric(mz), y = relInt)) +
-  geom_line(size = 0.5) +
-  geom_line(data = origSpecNorm[!is.na(origSpecNorm$mzRange), ], aes(color = mzRange), size = 0.5) +
+  geom_line(size = 0.25) +
+  geom_line(data = origSpecNorm[!is.na(origSpecNorm$mzRange), ], aes(color = mzRange), size = 0.30) +
   coolTheme +
   theme(legend.position = "none") +
   labs(title = "Experimental",
-       x = "m/z",
+       x = expression(italic("m/z")),
        y = "Relative Intensity")
 
-ggsave("../results/experimentalSpec.png", width = 4, height = 2.25)
-
-
-# random weights -------------------------------------------------------------------------
-specDat2 <- specDat %>% mutate(spec_id = "Spec_2")
-specDat3 <- specDat %>% mutate(spec_id = "Spec_3")
-specDat4 <- specDat %>% mutate(spec_id = "Spec_4")
-
-specCombo <- specDat2 %>% full_join(specDat3) %>% full_join(specDat4)
-
-idInfo <- tibble(id = as.factor(c("Spec_2", "Spec_3", "Spec_4")),
-                 labs = as.factor(c("0.63 * Kp + 0.59 * Pa + 1.00 * Sa",
-                          "1.00 * Kp + 0.18 * Pa + 0.35 * Sa",
-                          "0.92 * Kp + 1.00 * Pa + 0.13 * Sa")))
-
-set.seed(13476)
-specCombo <- specCombo %>% 
-  group_by(spec_id ,id, type) %>%
-  mutate(coeff = runif(1, 0.1, 1)) %>%
-  group_by(spec_id) %>%
-  mutate(trueCoeff = coeff / max(coeff))
-
-coeffs <- specCombo %>%
-  group_by(spec_id, type) %>%
-  summarise(coeff = trueCoeff[1])
-
-cmb2 <- specCombo %>%
-  group_by(spec_id, id, type) %>% 
-  mutate(relInt = relInt * coeff) %>% 
-  do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
-                                      metaData = 
-                                        list(file =paste0("/combined/", .$spec_id[[1]], ".mzXML")))) %>%
-  group_by(spec_id) %>%
-  do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum"))
-
-specCmb2 <- map_df(cmb2$massSpecObj, extractSpectra)
-
-specCmb2 <-  specCmb2 %>%
-  mutate(mzRange = ifelse(mz > colRanges$minMz[1] & mz < colRanges$maxMz[1], 
-                          colRanges$lab[1], NA),
-         mzRange = ifelse(mz > colRanges$minMz[2] & mz < colRanges$maxMz[2], 
-                          colRanges$lab[2], mzRange),
-         mzRange = ifelse(mz > colRanges$minMz[3] & mz < colRanges$maxMz[3], 
-                          colRanges$lab[3], mzRange)) %>%
-  left_join(idInfo) %>%
-  mutate(relInt = relInt * 100)
-
-specCmb2 %>%
-  ggplot(aes(x = as.numeric(mz), y = relInt)) +
-  geom_line(size = 0.5) +
-  geom_line(data = specCmb2[!is.na(specCmb2$mzRange), ], aes(color = mzRange), size = 0.5) +
-  coolTheme +
-  theme(legend.position = "none") +
-  labs(x = "m/z",
-       y = "Relative Intensity") +
-  facet_wrap(~ labs, ncol = 1) 
-
-ggsave("../results/randomMixedSpec.png", width = 4, height = 4)
-
+ggsave("../results/experimentalSpec.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
 
 ```
 
-# Increasing Spectral Complexity
+### Feature extraction performance
+```{r mixtureFeatureExtraction}
+vImpKp <- readRDS("../temp/vImpKp.rds") %>%
+    arrange(desc(Gain)) %>%
+    mutate(featureMz = as.factor(str_replace(Feature, "mz", "")),
+           featureMz = fct_reorder(featureMz, Gain, .desc = T),
+           cols = c(rep("top", 5), rep("bot", length(Feature) - 5))) %>%
+    select(featureMz, Feature, Gain, cols) %>%
+    rename(feat = Feature)
 
+vImpShort <- vImpKp[1:20, ]
+
+singleSpec <- specDat %>%
+    filter(type == "Klebsiella pneumoniae - sen")
+
+kpFeat <- readRDS("../temp/features.rds") %>%
+    filter(response == "Kp")
+
+singleFeat <- extractFeatures(singleSpec, kpFeat$mz, tol = 1.5) %>%
+    mutate(type = "Isolate K. pneumoniae",
+           id = "isolate")
+mixFeat <- extractFeatures(cmbSpec, kpFeat$mz, tol = 1.5) %>%
+    mutate(type = "Simulated Mixture with K. pneumoniae",
+           id = "mixture")
+
+feats <- singleFeat %>%
+    full_join(mixFeat)
+
+
+feats %>%
+    right_join(vImpShort) %>%
+    ggplot(aes(x = featureMz, y = relInt, ymax = relInt, ymin = 0)) +
+    geom_linerange(size = 0.75) +
+    geom_point(size = 2) +
+    ylim(c(0, 1.05)) +
+    ylab("Relative Intensity") +
+    xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          legend.position = "none") +
+    facet_wrap(~ type, ncol = 2)
+    
+ggsave("../results/featureComparison.pdf", width = 160, height = 50, units = "mm", useDingbats = F)
+
+feats %>%
+    right_join(vImpKp) %>%
+    select(featureMz, id, relInt, Gain) %>%
+    spread(id, relInt) %>%
+    mutate(diff = abs(isolate - mixture),
+           Interference = ifelse(diff <= 0.05, "No", "Yes")) %>%
+    ggplot(aes(x = isolate, y = mixture, size = Gain, fill = Interference)) +
+    geom_point(shape = 21) +
+    scale_size_continuous(guide = "none") +
+    ylim(c(0, 1.05)) +
+    xlim(c(0, 1.05)) +
+    theme(legend.position = c(0.99, 0.01),
+          legend.justification = c(1, 0),
+          legend.background = element_rect(color = "black"),
+          legend.key.size = unit(0.5, "lines")) +
+    coord_equal() +
+    xlab("Feature Intensity in Isolate") +
+    ylab("Feature Intensity in Mixture")
+
+ggsave("../results/interferences.pdf", width = 50, height = 50, units = "mm", useDingbats = F)
+```
+
+### Session Info
 ```{r}
-# Illustration of increasing complexity
-files <- list.files("../data/fullLib", 
-                    full.names = T, 
-                    pattern = "mzXML$",
-                    recursive = T)
-
-specInfo <- tibble(fname = files) %>%
-  mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
-         id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
-         species = str_match(type, "^[^ ]+ [^ ]+"))
-
-speciesSelect <- specInfo %>%
-  group_by(species) %>%
-  summarize(num = length(id)) %>%
-  sample_n(size = 40)
-
-selected <- speciesSelect %>%
-  left_join(specInfo) %>%
-  group_by(species) %>%
-  sample_n(size = 1) %>%
-  ungroup() %>%
-  mutate(coeff = runif(40, 0, 1))
-
-files <- files[files %in% selected$fname]
-
-spec <- preProcessSpec(files, hws = 80)
-
-specDat <- map_df(spec, extractSpectra)
-
-specFull <- selected %>%
-  select(id, coeff) %>%
-  left_join(specDat) %>%
-  mutate(relInt = relInt * coeff)
-
-cmb <- map_df(c(1, 2, 5, 10, 20, 40), function(x) {
-  sel <- selected$id[1:x]
-  dat <- filter(specFull, id %in% sel)
-  
-  cmb <- dat %>%
-    mutate(spec_id = as.factor(paste0("spec_", x))) %>%
-    group_by(spec_id, id, type) %>%
-    do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
-                                        metaData = 
-                                          list(file = paste0("/cmb/", .$spec_id[1], ".mzXML")))) %>%
-    group_by(spec_id) %>%
-    do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum"))
-  
-    return(cmb)
-})
-
-cmbDat <- map_df(cmb$massSpecObj, extractSpectra)
-
-cmbDat %>%
-  mutate(relInt = relInt * 100,
-         lab = paste0(gsub("spec_", "", id), " Species"),
-         lab = fct_reorder(lab, as.numeric(str_match(lab, "^([^ ]+) ")[ , 2]))) %>%
-  ggplot(aes(x = as.numeric(mz), y = relInt)) +
-  geom_line(size = 0.5) +
-  coolTheme +
-  theme(legend.position = "none") +
-  labs(x = "m/z",
-       y = "Relative Intensity") +
-  facet_wrap(~ lab, ncol = 2)
+session_info()
 ```
-
-
