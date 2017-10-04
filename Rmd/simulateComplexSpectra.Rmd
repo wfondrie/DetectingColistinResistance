@@ -1,12 +1,14 @@
 ---
 title: "Simulating Glycolipid MALDI-TOF-MS of Complex Samples"
 Author: "William E Fondrie"
-Date: "7/20/17"
 output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
 ```
 
 # Introduction 
@@ -14,7 +16,7 @@ This file contains the code to simulate glycolipid MALDI-TOF mass spectra of org
 
 # Load Libraries & Prepare Workspace
 ```{r loadLibraries}
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(MALDIquant, quietly = T)
 library(MALDIquantForeign, quietly = T)
 library(stringr, quietly = T)

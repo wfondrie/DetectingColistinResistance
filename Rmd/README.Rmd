@@ -3,11 +3,13 @@ title: "Insert Paper Title Here"
 author: "William E Fondrie"
 output: github_document
 ---
-Order of analysis:  
+Order of analysis (see the Rmd subdirectory for details):  
 1. [modelTraining.Rmd]("Rmd/modelTraining.md")  
-2. [simulateComplexSpectra.Rmd]("Rmd/modelTraining.md")  
-3. [evaluateModels.Rmd]("Rmd/evaluateModels.md")    
-4. [makeMiscFigures.Rmd]("Rmd/makeMiscFigures.md")
+2. [simulateComplexSpectra.Rmd]("Rmd/simulateComplexSpectra.md")
+3. [mixtureAnalysis.Rmd]("Rmd/mixtureAnalysis.md")
+4. [evaluateModels.Rmd]("Rmd/evaluateModels.md")    
+5. [makeMiscFigures.Rmd]("Rmd/makeMiscFigures.md")
+6. [illustrations.Rmd]("Rmd/illustrations.md")
 
 ## Code to run the analysis
 ```{r runAnalysis, results='hide'}
@@ -16,11 +18,33 @@ library(knitr)
 mzTol <- 1.5 # m/z tolerance for feature extraction in Da
 saveRDS(mzTol, "../temp/mzTol.rds")
 
+instPckgs <- F # change to "T" to install all packages used in the analyses
+
+if(instPckgs) {
+    install.packages(c("tidyverse",
+                       "stringr",
+                       "forcats",
+                       "MALDIquant",
+                       "MALDIquantForeign",
+                       "caret",
+                       "PRROC",
+                       "xgboost",
+                       "tictoc",
+                       "devtools",
+                       "openxlsx"))
+}
+
+# Make results and temp directories:
+dir.create("../temp")
+dir.create("../results")
+
 # Run analysis scripts
-#knit("modelTraining.Rmd")
-#knit("simulateComplexSpectra.Rmd")
-knit("evaluateModels.Rmd")
-#knit("makeMiscFigures.Rmd")
+knit("modelTraining.Rmd") # Trains xgboost models
+knit("simulateComplexSpectra.Rmd") # simulates polymicrobial spectra
+knit("mixtureAnalysis.Rmd") # Imports spectra from experimental two-species mixtures
+knit("evaluateModels.Rmd") # Calculate performance metrics and makes figures
+knit("makeMiscFigures.Rmd") # Creates additional figures
+knit("illustrations.Rmd") # Creates additional figures for illustrations
 
 # Copy GitHub markdown file to top directory
 file.copy("README.md", "..", overwrite=T)

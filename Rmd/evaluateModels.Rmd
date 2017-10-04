@@ -1,5 +1,6 @@
 ---
-title: "R Notebook"
+title: "Evaluate XGBoost Models"
+Author: "William E Fondrie"
 output: github_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
@@ -12,7 +13,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide", fig.al
 ## Load Libraries & Prepare Workspace
 ```{r loadLibraries, results = "hide"}
 # data manipulation
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(stringr, quietly = T)
 library(forcats, quietly = T)
 
@@ -22,7 +23,7 @@ library(caret, quietly = T)
 library(xgboost, quietly = T)
 
 # for session info
-library(devtools)
+library(devtools, quietly = T)
 
 # ggplot2 theme
 source("../R/ggplotTheme.R")
@@ -70,9 +71,6 @@ abRes <- formatResults(abMod, testdmatList$Ab)
 abPosPR <- pr.curve(abRes$pos[abRes$truth == "pos"], 
                     abRes$pos[abRes$truth != "pos"], curve = T)
 
-# abNegPR <- pr.curve(abRes$neg[abRes$truth == "neg"], 
-#                     abRes$neg[abRes$truth != "neg"], curve = T)
-
 abSpeciesPR <- pr.curve(abRes$speciesVsOther[abRes$truth != "other"], 
                         abRes$speciesVsOther[abRes$truth ==  "other"], curve = T)
 
@@ -80,17 +78,8 @@ abSpeciesPR <- pr.curve(abRes$speciesVsOther[abRes$truth != "other"],
 abPosROC <- roc.curve(abRes$pos[abRes$truth == "pos"], 
                     abRes$pos[abRes$truth != "pos"], curve = T)
 
-# abNegROC <- roc.curve(abRes$neg[abRes$truth == "neg"], 
-#                     abRes$neg[abRes$truth != "neg"], curve = T)
-
 abSpeciesROC <- roc.curve(abRes$speciesVsOther[abRes$truth != "other"], 
                         abRes$speciesVsOther[abRes$truth ==  "other"], curve = T)
-
-# abPrior <- abRes %>%
-#     summarize(pos = sum(truth == "pos") / length(truth),
-#               neg = sum(truth == "neg") / length(truth),
-#               species = sum(truth != "other") / length(truth)) %>%
-#     gather(type, prior)
 
 saveRDS(abRes, file = "../temp/abRes.rds")
 ```
@@ -104,9 +93,6 @@ kpRes <- formatResults(kpMod, testdmatList$Kp)
 kpPosPR <- pr.curve(kpRes$pos[kpRes$truth == "pos"], 
                     kpRes$pos[kpRes$truth != "pos"], curve = T)
 
-# kpNegPR <- pr.curve(kpRes$neg[kpRes$truth == "neg"],
-#                     kpRes$neg[kpRes$truth != "neg"], curve = T)
-
 kpSpeciesPR <- pr.curve(kpRes$speciesVsOther[kpRes$truth != "other"], 
                         kpRes$speciesVsOther[kpRes$truth ==  "other"], curve = T)
 
@@ -114,17 +100,8 @@ kpSpeciesPR <- pr.curve(kpRes$speciesVsOther[kpRes$truth != "other"],
 kpPosROC <- roc.curve(kpRes$pos[kpRes$truth == "pos"], 
                     kpRes$pos[kpRes$truth != "pos"], curve = T)
 
-kpNegROC <- roc.curve(kpRes$neg[kpRes$truth == "neg"], 
-                    kpRes$neg[kpRes$truth != "neg"], curve = T)
-
 kpSpeciesROC <- roc.curve(kpRes$speciesVsOther[kpRes$truth != "other"], 
                         kpRes$speciesVsOther[kpRes$truth ==  "other"], curve = T)
-
-kpPrior <- kpRes %>%
-    summarize(pos = sum(truth == "pos") / length(truth),
-              neg = sum(truth == "neg") / length(truth),
-              species = sum(truth != "other") / length(truth)) %>%
-    gather(type, prior)
 
 saveRDS(kpRes, file = "../temp/kpRes.rds")
 ```
@@ -135,24 +112,16 @@ saveRDS(kpRes, file = "../temp/kpRes.rds")
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prAb <- as.tibble(rbind(abPosPR$curve, abSpeciesPR$curve))
-#prAb <- as.tibble(rbind(abPosPR$curve, abNegPR$curve, abSpeciesPR$curve))
 names(prAb) <- prnames
 
 labsAb <- c(paste0("Resistant\nAUC = ", sigRound(abPosPR$auc.integral, 3)),
-            #paste0("Susceptible\nAUC = ", sigRound(abNegPR$auc.integral, 3)),
             paste0("Species\nAUC = ", sigRound(abSpeciesPR$auc.integral, 3)))
-
-# abPrior$cond <- labsAb
-# abPrior$cond <- fct_rev(fct_relevel(as.factor(abPrior$cond), labsAb))
 
 AbPrCurve <- prAb %>%
     mutate(cond = c(rep(labsAb[1], nrow(abPosPR$curve)),
-                    #rep(labsAb[2], nrow(abNegPR$curve)),
                     rep(labsAb[2], nrow(abSpeciesPR$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), labsAb))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
-    #geom_hline(data = abPrior, aes(yintercept = prior, color = cond), 
-    #           linetype = "dashed", size = 1) +
     geom_path(size = 1)  +
     coord_equal() +
     ylim(c(0, 1)) +
@@ -170,18 +139,15 @@ ggsave("../results/AbPrCurve.pdf", width = 70, height = 50, units = "mm", useDin
 # ROC
 rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
 rocAb <- as.tibble(rbind(abPosROC$curve, 
-                         #abNegROC$curve, 
                          abSpeciesROC$curve))
 names(rocAb) <- rocnames
 
 roclabsAb <- c(paste0("Resistant\nAUC = ", sigRound(abPosROC$auc, 3)),
-               #paste0("Susceptible\nAUC = ", sigRound(abNegROC$auc, 3)),
                paste0("Species\nAUC = ", sigRound(abSpeciesROC$auc, 3)))
 
 
 AbRocCurve <- rocAb %>%
     mutate(cond = c(rep(roclabsAb[1], nrow(abPosROC$curve)),
-                    #rep(roclabsAb[2], nrow(abNegROC$curve)),
                     rep(roclabsAb[2], nrow(abSpeciesROC$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), roclabsAb))) %>%
     ggplot(aes(x = `1 - Specificity (FPR)`, y = `Sensitivity (TPR)`, color = cond)) +
@@ -207,25 +173,17 @@ ggsave("../results/AbRocCurve.pdf", width = 70, height = 50, units = "mm", useDi
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prKp <- as.tibble(rbind(kpPosPR$curve, 
-                        #kpNegPR$curve, 
                         kpSpeciesPR$curve))
 names(prKp) <- prnames
 
 labsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosPR$auc.integral, 3)),
-            #paste0("Susceptible\nAUC = ", sigRound(kpNegPR$auc.integral, 3)),
             paste0("Species\nAUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
-
-# kpPrior$cond <- labsKp
-# kpPrior$cond <- fct_rev(fct_relevel(as.factor(kpPrior$cond), labsKp))
 
 prKp %>%
     mutate(cond = c(rep(labsKp[1], nrow(kpPosPR$curve)),
-                    #rep(labsKp[2], nrow(kpNegPR$curve)),
                     rep(labsKp[2], nrow(kpSpeciesPR$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), labsKp))) %>%
     ggplot(aes(x = Recall, y = Precision, color = cond)) +
-    # geom_hline(data = kpPrior, aes(yintercept = prior, color = cond), 
-    #            linetype = "dashed", size = 1) +
     geom_path(size = 1)  +
     ylim(c(0, 1)) +
     xlim(c(0, 1)) +
@@ -247,12 +205,10 @@ rocKp <- as.tibble(rbind(kpPosROC$curve,
 names(rocKp) <- rocnames
 
 roclabsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosROC$auc, 3)),
-               #paste0("Susceptible\nAUC = ", sigRound(kpNegROC$auc, 3)),
                paste0("Species\nAUC = ", sigRound(kpSpeciesROC$auc, 3)))
 
 rocKp %>%
     mutate(cond = c(rep(roclabsKp[1], nrow(kpPosROC$curve)),
-                    #rep(roclabsKp[2], nrow(kpNegROC$curve)),
                     rep(roclabsKp[2], nrow(kpSpeciesROC$curve))),
            cond = fct_rev(fct_relevel(as.factor(cond), roclabsKp))) %>%
     ggplot(aes(x = `1 - Specificity (FPR)`, y = `Sensitivity (TPR)`, color = cond)) +
@@ -418,36 +374,28 @@ mixedAbRes <- formatResults(abMod, mixedDmatList$Ab) %>%
 mixedAbPRall <- mixedAbRes %>%
     group_by(orgResults) %>%
     do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       #prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T),
        rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       #rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
     mutate(prPosAUC = prPos$auc.integral,
-           #prNegAUC = prNeg$auc.integral,
            prSpeciesAUC = prSpecies$auc.integral,
            rocPosAUC = rocPos$auc,
-           #rocNegAUC = rocNeg$auc,
            rocSpeciesAUC = rocSpecies$auc,
            n = "Overall")
 
 mixedAbPRByn <- mixedAbRes %>%
     group_by(orgResults, n) %>%
     do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       #prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T),
        rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       #rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
     mutate(prPosAUC = prPos$auc.integral,
-           #prNegAUC = prNeg$auc.integral,
            prSpeciesAUC = prSpecies$auc.integral,
            rocPosAUC = rocPos$auc,
-           #rocNegAUC = rocNeg$auc,
            rocSpeciesAUC = rocSpecies$auc)
 
 mixedAbCurves <- mixedAbPRall %>% rbind(mixedAbPRByn)
@@ -466,36 +414,28 @@ mixedKpRes <- formatResults(kpMod, mixedDmatList$Kp) %>%
 mixedKpAll <- mixedKpRes %>%
     group_by(orgResults) %>%
     do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       #prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T),
        rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       #rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
     mutate(prPosAUC = prPos$auc.integral,
-           #prNegAUC = prNeg$auc.integral,
            prSpeciesAUC = prSpecies$auc.integral,
            rocPosAUC = rocPos$auc,
-           #rocNegAUC = rocNeg$auc,
            rocSpeciesAUC = rocSpecies$auc,
            n = "Overall")
 
 mixedKpByn <- mixedKpRes %>%
     group_by(orgResults, n) %>%
     do(prPos = pr.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       #prNeg = pr.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        prSpecies = pr.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T),
        rocPos = roc.curve(.$pos[.$truth == "pos"], .$pos[.$truth != "pos"], curve = T),
-       #rocNeg = roc.curve(.$neg[.$truth == "neg"], .$neg[.$truth != "neg"], curve = T),
        rocSpecies = roc.curve(.$speciesVsOther[.$truth != "other"], 
                             .$speciesVsOther[.$truth ==  "other"], curve = T)) %>%
     mutate(prPosAUC = prPos$auc.integral,
-           #prNegAUC = prNeg$auc.integral,
            prSpeciesAUC = prSpecies$auc.integral,
            rocPosAUC = rocPos$auc,
-           #rocNegAUC = rocNeg$auc,
            rocSpeciesAUC = rocSpecies$auc)
 
 mixedKpCurves <- mixedKpAll %>% rbind(mixedKpByn)
@@ -517,24 +457,13 @@ mixedCurveDat <- mixedCurves %>%
     unnest(curveDf) %>%
     rename("Rec_Spec" = V1, "Prec_Sens" = V2, "Threshold" = V3) %>%
     mutate(PrOrRoc = ifelse(str_detect(curveType, "pr"), "PR", "ROC"),
-           #type = ifelse(str_detect(curveType, "Neg"), "Colistin-Susceptible", "Species"),
            type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", "Species"), #type),
            type = as.factor(type))
-
-
-# mixedPriors <- tibble(type = c("Colistin-Resistant", 
-#                                "Colistin-Susceptible", 
-#                                "Species"),
-#                       `A. baumannii` = c(0.15, 0.15, 0.3),
-#                       `K. pneumoniae` = c(0.15, 0.15, 0.3)) %>%
-#     gather(orgResults, prior, -type)
 
 mixedCurveDat %>%
     filter(PrOrRoc == "PR") %>%
     ggplot(aes(x = Rec_Spec, y = Prec_Sens, color = n)) +
     geom_path() +
-    # geom_hline(data = mixedPriors, aes(yintercept = prior), 
-    #            linetype = "dashed", size = 1) +
     coord_equal() +
     facet_grid(orgResults ~ type) +
     xlab("Recall") +
@@ -574,7 +503,6 @@ ggsave("../results/mixtureROCCurves.pdf", width = 70, height = 80, units = "mm",
 ### Plot the AUC of PR and ROC Curves With Increasing Matrix Complexity  
 ```{r, fig.width = 6}
 labOrder <- c("Species", 
-              #"Colistin-Susceptible", 
               "Colistin-Resistant")
 
 mixedCurvesAUC <- mixedCurves %>%
@@ -765,6 +693,7 @@ ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm"
 
 ```
 
+### Session Info  
 ```{r}
 session_info()
 ```

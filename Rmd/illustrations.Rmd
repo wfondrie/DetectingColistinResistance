@@ -1,20 +1,25 @@
 ---
 title: "Strategy Illustrations"
+Author: "William E Fondrie"
 output: github_document
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
 ```
 
 ```{r loadLibraries, results = "hide", echo = FALSE}
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(MALDIquant, quietly = T)
 library(MALDIquantForeign, quietly = T)
 library(caret, quietly = T)
 library(PRROC, quietly = T)
 library(stringr, quietly = T)
 library(forcats, quietly = T)
+library(devtools, quietly = T)
 
 # ggplot2 theme
 source("../R/ggplotTheme.R")
@@ -310,3 +315,7 @@ feats %>%
 ggsave("../results/interferences.pdf", width = 50, height = 50, units = "mm", useDingbats = F)
 ```
 
+### Session Info
+```{r}
+session_info()
+```

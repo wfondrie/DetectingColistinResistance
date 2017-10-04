@@ -1,14 +1,23 @@
 ---
-title: "Make Misc Figures"
+title: "Make Miscellaneous Figures"
+Author: "William E Fondrie"
 output: github_document
 ---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
+```
 
 # Prepare Workspace
 ```{r loadLibraries, results = "hide"}
 # data manipulation
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(stringr, quietly = T)
 library(forcats, quietly = T)
+library(devtools, quietly = T)
 
 # handling MALDI spectra
 library(MALDIquant, quietly = T)
@@ -140,4 +149,9 @@ ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", us
 
 ummary(specInfo$species)
 length(unique(specInfo$species))
+```
+
+### Session Info
+```{r}
+session_info()
 ```

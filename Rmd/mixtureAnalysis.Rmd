@@ -1,13 +1,21 @@
 ---
-title: "R Notebook"
+title: "Analysis of Experimentl Two-Species UTI Mixtures"
 output: github_document
 ---
+
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
+```
  
 ```{r}
 # data manipulation
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(stringr, quietly = T)
 library(forcats, quietly = T)
+library(devtools, quietly = T)
 
 # handling MALDI spectra
 library(MALDIquant, quietly = T)
@@ -92,3 +100,7 @@ exampleSpec %>%
 ggsave("../results/twoSpeciesMixtureSpectra.pdf", width = 200, height = 120, unit = "mm", useDingbats = F)
 ```
 
+### Session Info
+```{r}
+session_info()
+```
