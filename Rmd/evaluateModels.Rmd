@@ -21,6 +21,9 @@ library(PRROC, quietly = T)
 library(caret, quietly = T)
 library(xgboost, quietly = T)
 
+# for session info
+library(devtools)
+
 # ggplot2 theme
 source("../R/ggplotTheme.R")
 theme_set(coolTheme)
@@ -89,7 +92,7 @@ abSpeciesROC <- roc.curve(abRes$speciesVsOther[abRes$truth != "other"],
 #               species = sum(truth != "other") / length(truth)) %>%
 #     gather(type, prior)
 
-
+saveRDS(abRes, file = "../temp/abRes.rds")
 ```
 
 ### Klebsiella pneumoniae
@@ -122,6 +125,8 @@ kpPrior <- kpRes %>%
               neg = sum(truth == "neg") / length(truth),
               species = sum(truth != "other") / length(truth)) %>%
     gather(type, prior)
+
+saveRDS(kpRes, file = "../temp/kpRes.rds")
 ```
 
 ### Plot PR and ROC Curves
@@ -446,6 +451,8 @@ mixedAbPRByn <- mixedAbRes %>%
            rocSpeciesAUC = rocSpecies$auc)
 
 mixedAbCurves <- mixedAbPRall %>% rbind(mixedAbPRByn)
+
+saveRDS(mixedAbRes, file = "../temp/mixedAbRes.rds")
 ```
 
 ### Klebsiella pneumoniae
@@ -495,6 +502,8 @@ mixedKpCurves <- mixedKpAll %>% rbind(mixedKpByn)
 
 # All PR and ROC results
 mixedCurves <- mixedKpCurves %>% rbind(mixedAbCurves)
+
+saveRDS(mixedKpRes, file = "../temp/mixedKpRes.rds")
 ```
 
 ### Plot PR and ROC curves for Simulated Mixtures by Number of Spectra in Mixture
@@ -700,6 +709,9 @@ twoKpRes <- formatResults(kpMod, twoSpeciesDmatList$Kp) %>%
 twoRes <- twoAbRes %>% 
     full_join(twoKpRes) %>%
     mutate(Colistin = fct_rev(as.factor(Colistin)))
+
+saveRDS(twoAbRes, file = "../temp/twoAbRes.rds")
+saveRDS(twoKpRes, file = "../temp/twoKpRes.rds")
 ```
 
 #### Plot scores vs cutoff
@@ -751,5 +763,9 @@ twoRes %>%
 ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)
     
 
+```
+
+```{r}
+session_info()
 ```
 
