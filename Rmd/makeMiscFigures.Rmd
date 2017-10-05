@@ -1,6 +1,6 @@
 ---
 title: "Make Miscellaneous Figures"
-Author: "William E Fondrie"
+author: "William E Fondrie"
 output: github_document
 ---
 
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(warning = FALSE,
                       cache = T)
 ```
 
-# Prepare Workspace
+## Load Libraries and  Prepare Workspace
 ```{r loadLibraries, results = "hide"}
 # data manipulation
 suppressMessages(library(tidyverse, quietly = T))
@@ -32,7 +32,7 @@ source("../R/preProcessSpec.R")
 source("../R/extract.R")
 ```
 
-# load data
+# Load Data
 ```{r}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
@@ -65,7 +65,7 @@ feattbl <- spec %>%
   do(extractFeatures(., featureVec = unique(features$mz), tol = 1.5))
 ```
 
-# plot of resistance peaks and their variation
+## Plot of Resistance Peaks and Their Variation
 ```{r peaks}
 # Ab
 abFeat <- c("mz2036.4927")
@@ -91,7 +91,7 @@ ggsave("../results/resPeaks.pdf", width = 105, height = 50, unit = "mm", useDing
 
 ```
 
-# plot of the library
+## Plot of the Isolate Dataset
 ```{r libraryDistro}
 specInfo %>% 
   group_by(species) %>%
@@ -151,7 +151,7 @@ ummary(specInfo$species)
 length(unique(specInfo$species))
 ```
 
-### Session Info
-```{r}
+## Session Info
+```{r, results = "markup"}
 session_info()
 ```

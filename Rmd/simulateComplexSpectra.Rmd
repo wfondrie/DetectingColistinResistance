@@ -8,11 +8,12 @@ output: github_document
 knitr::opts_chunk$set(warning = FALSE, 
                       message = FALSE, 
                       results = "hide", 
-                      cache = T)
+                      cache = T,
+                      cache.lazy = F)
 ```
 
 # Introduction 
-This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~50 Gb of RAM to execute. The machine this was run on had 64 Gb of RAM and 2x AMD Opteron 6272 processors (2.10 GHz).  
+This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~25 Gb of RAM to execute. The machine this was run on had 64 Gb of RAM and 2x AMD Opteron 6272 processors (2.10 GHz).  
 
 # Load Libraries & Prepare Workspace
 ```{r loadLibraries}
@@ -73,7 +74,7 @@ selectLinearCombos <- function(n, info) {
         sample_n(size = n, weight = weights)
     
     selected <- speciesSelect %>%
-        left_join(info) %>%
+        left_join(info, by = "species") %>%
         filter(type != paste0(species, res)) %>%
         group_by(species) %>%
         sample_n(size = 1) %>%
@@ -137,7 +138,7 @@ gc() # garbage collection. Free as much memory as possible.
 
 # Takes ~30 min
 comboSpec <- combos %>% 
-    left_join(spec) %>%
+    left_join(spec, by = c("type", "id")) %>%
     group_by(spec_id) %>%
     group_by(spec_id, id, type) %>%
     do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 

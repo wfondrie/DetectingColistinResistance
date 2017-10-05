@@ -1,14 +1,12 @@
 ---
 title: "Evaluate XGBoost Models"
-Author: "William E Fondrie"
+author: "William E Fondrie"
 output: github_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide", fig.align = "center",
                       fig.height = 3.5, fig.width =6)
 ```
-
-## Introduction 
 
 ## Load Libraries & Prepare Workspace
 ```{r loadLibraries, results = "hide"}
@@ -200,7 +198,6 @@ ggsave("../results/KpPrCurve.pdf", width = 70, height = 50, units = "mm", useDin
 # ROC
 rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
 rocKp <- as.tibble(rbind(kpPosROC$curve, 
-                         #kpNegROC$curve, 
                          kpSpeciesROC$curve))
 names(rocKp) <- rocnames
 
@@ -228,7 +225,7 @@ ggsave("../results/KpRocCurve.pdf", width = 70, height = 50, units = "mm", useDi
 ```
 
 ## New Confusion Matrices
-```{r misclassified, results='asis'}
+```{r misclassified, results='markup'}
 pickThold <- function(curve, minSens) {
     dat <- as.data.frame(curve$curve)
     dat <- dat[dat[ , 2] >= minSens, ]
@@ -603,7 +600,7 @@ resStats(mixedKpRes)
 
 ```
 
-### Real Two Species Mixtures
+## Two-Species UTI Mixtures
 ```{r}
 # Import simulated mixture spectra features and information
 twoSpeciesSumm <- readRDS("../temp/twoSpeciesSpecInfo.rds")
@@ -642,7 +639,7 @@ saveRDS(twoAbRes, file = "../temp/twoAbRes.rds")
 saveRDS(twoKpRes, file = "../temp/twoKpRes.rds")
 ```
 
-#### Plot scores vs cutoff
+### Plot scores vs cutoff
 ```{r}
 tholdSpecies <- thold %>%
     filter(str_detect(type, "species")) %>%
@@ -693,8 +690,8 @@ ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm"
 
 ```
 
-### Session Info  
-```{r}
+## Session Info  
+```{r, results = "markup"}
 session_info()
 ```
 

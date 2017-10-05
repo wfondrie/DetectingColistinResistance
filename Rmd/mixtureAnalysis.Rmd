@@ -1,5 +1,6 @@
 ---
-title: "Analysis of Experimentl Two-Species UTI Mixtures"
+title: "Analysis of Experimental Two-Species UTI Mixtures"
+author: "William E Fondrie"
 output: github_document
 ---
 
@@ -9,6 +10,8 @@ knitr::opts_chunk$set(warning = FALSE,
                       results = "hide", 
                       cache = T)
 ```
+
+## Load Libraries & Prepare Workspace  
  
 ```{r}
 # data manipulation
@@ -32,8 +35,7 @@ source("../R/createNewFeatureTbl.R")
 
 featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
 ```
-
-
+## Import and Process Spectra  
 ```{r}
 files <- list.files("../data/twoSpeciesMixtures", 
                     full.names = T, 
@@ -73,7 +75,7 @@ twoSpeciesDatList <- map(trainIdx,createNewFeatureTbl,
 saveRDS(twoSpeciesDatList, file = "../temp/twoSpeciesDatList.rds")
 ```
 
-### Plot Spectra
+## Plot Spectra
 ```{r}
 
 exampleSpec <- twoSpeciesSpecInfo %>%
@@ -100,7 +102,7 @@ exampleSpec %>%
 ggsave("../results/twoSpeciesMixtureSpectra.pdf", width = 200, height = 120, unit = "mm", useDingbats = F)
 ```
 
-### Session Info
-```{r}
+## Session Info
+```{r, results= "markup"}
 session_info()
 ```
