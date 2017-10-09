@@ -4,7 +4,7 @@ author: "William E Fondrie"
 output: github_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide", fig.align = "center",
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center",
                       fig.height = 3.5, fig.width =6)
 ```
 
@@ -106,7 +106,7 @@ saveRDS(kpRes, file = "../temp/kpRes.rds")
 
 ### Plot PR and ROC Curves
 #### Acinetobacter PR  & ROC Curves
-```{r AbPR, results="hold", fig.show="hold"}
+```{r AbPR}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prAb <- as.tibble(rbind(abPosPR$curve, abSpeciesPR$curve))
@@ -167,7 +167,7 @@ ggsave("../results/AbRocCurve.pdf", width = 70, height = 50, units = "mm", useDi
 ```
 
 #### Klebsiella pneumoniae PR  & ROC Curves
-```{r KpPR, results = "hold", fig.show = "hold"}
+```{r KpPR}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prKp <- as.tibble(rbind(kpPosPR$curve, 
@@ -225,7 +225,7 @@ ggsave("../results/KpRocCurve.pdf", width = 70, height = 50, units = "mm", useDi
 ```
 
 ## New Confusion Matrices
-```{r misclassified, results='markup'}
+```{r misclassified}
 pickThold <- function(curve, minSens) {
     dat <- as.data.frame(curve$curve)
     dat <- dat[dat[ , 2] >= minSens, ]
@@ -277,7 +277,7 @@ confusionMatrix(data = kpRes2$posPred, reference = kpRes2$posTruth,
 ```
 
 ## Variable Importance
-```{r varImp, results = "hold", fig.show = "hold", fig.width = 4}
+```{r varImp}
 vImpAb <- xgb.importance(colnames(testdmatList$Ab$dat), model = abMod) %>%
     mutate(org = "Ab")
 
@@ -444,7 +444,7 @@ saveRDS(mixedKpRes, file = "../temp/mixedKpRes.rds")
 ```
 
 ### Plot PR and ROC curves for Simulated Mixtures by Number of Spectra in Mixture
-```{r simMixPlot, fig.width = 8, fig.height = 5, results = "hold"}
+```{r simMixPlot, fig.width = 8, fig.height = 5}
 mixedCurveDat <- mixedCurves %>%
     select(-ends_with("AUC")) %>%
     gather(curveType, curveDat, -n, -orgResults) %>%
@@ -691,7 +691,7 @@ ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm"
 ```
 
 ## Session Info  
-```{r sessionInfo, results = "markup"}
+```{r sessionInfo}
 session_info()
 ```
 
