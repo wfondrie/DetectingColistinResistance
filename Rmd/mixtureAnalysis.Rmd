@@ -13,7 +13,7 @@ knitr::opts_chunk$set(warning = FALSE,
 
 ## Load Libraries & Prepare Workspace  
  
-```{r}
+```{r loadLibraries}
 # data manipulation
 suppressMessages(library(tidyverse, quietly = T))
 library(stringr, quietly = T)
@@ -36,7 +36,7 @@ source("../R/createNewFeatureTbl.R")
 featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
 ```
 ## Import and Process Spectra  
-```{r}
+```{r import}
 files <- list.files("../data/twoSpeciesMixtures", 
                     full.names = T, 
                     pattern = "mzXML$",
@@ -76,7 +76,7 @@ saveRDS(twoSpeciesDatList, file = "../temp/twoSpeciesDatList.rds")
 ```
 
 ## Plot Spectra
-```{r}
+```{r plotSpec}
 
 exampleSpec <- twoSpeciesSpecInfo %>%
     mutate(percentTarget = 100 - percentEc,
@@ -103,6 +103,6 @@ ggsave("../results/twoSpeciesMixtureSpectra.pdf", width = 200, height = 120, uni
 ```
 
 ## Session Info
-```{r, results= "markup"}
+```{r sessionInfo, results= "markup"}
 session_info()
 ```

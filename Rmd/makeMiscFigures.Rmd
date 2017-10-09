@@ -8,7 +8,8 @@ output: github_document
 knitr::opts_chunk$set(warning = FALSE, 
                       message = FALSE, 
                       results = "hide", 
-                      cache = T)
+                      cache = T,
+                      cache.lazy = F)
 ```
 
 ## Load Libraries and  Prepare Workspace
@@ -33,7 +34,7 @@ source("../R/extract.R")
 ```
 
 ## Load Data
-```{r}
+```{r loadData}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
                     pattern = "mzXML$",
@@ -109,6 +110,7 @@ specInfo %>%
   ylab("Number of Mass Spectra") +
   scale_fill_discrete(name = NULL, breaks = c("Colistin-Resistant","Colistin-Susceptible")) +
   coord_flip() +
+  coolTheme +
   theme(legend.position = c(0.95, 0.25),
         legend.justification = c(1,0),
         axis.title.y = element_blank(),
@@ -147,11 +149,11 @@ specInfo %>%
 
 ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", useDingbats = F)
 
-ummary(specInfo$species)
+summary(specInfo$species)
 length(unique(specInfo$species))
 ```
 
 ## Session Info
-```{r, results = "markup"}
+```{r sessionInfo, results = "markup"}
 session_info()
 ```

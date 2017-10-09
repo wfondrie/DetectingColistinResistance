@@ -106,7 +106,7 @@ saveRDS(kpRes, file = "../temp/kpRes.rds")
 
 ### Plot PR and ROC Curves
 #### Acinetobacter PR  & ROC Curves
-```{r, AbPR, results="hold", fig.show="hold"}
+```{r AbPR, results="hold", fig.show="hold"}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prAb <- as.tibble(rbind(abPosPR$curve, abSpeciesPR$curve))
@@ -167,7 +167,7 @@ ggsave("../results/AbRocCurve.pdf", width = 70, height = 50, units = "mm", useDi
 ```
 
 #### Klebsiella pneumoniae PR  & ROC Curves
-```{r, KpPR, results = "hold", fig.show = "hold"}
+```{r KpPR, results = "hold", fig.show = "hold"}
 # PR
 prnames <- c("Recall", "Precision", "threshold")
 prKp <- as.tibble(rbind(kpPosPR$curve, 
@@ -350,7 +350,7 @@ saveRDS(vImpKp, "../temp/vImpKp.rds")
 ```
 
 ## Performance on Simulated Mixture Spectra  
-```{r, loadMixtureData}
+```{r loadMixtureData}
 # Import simulated mixture spectra features and information
 mixedSumm <- readRDS("../temp/complexSpectraSummary.rds")
 mixedComponents <- readRDS("../temp/complexComponents.rds")
@@ -361,7 +361,7 @@ mixedDmatList <- prepareData(mixedList, orgLabs = c("Ab", "Kp"))
 ```
 
 ### Acinetobacter baumannii  
-```{r, mixedAbCm}
+```{r mixedAbCm}
 mixedAbRes <- formatResults(abMod, mixedDmatList$Ab) %>%
     cbind(., mixedList$Ab) %>%
     select(-starts_with("mz")) %>%
@@ -401,7 +401,7 @@ saveRDS(mixedAbRes, file = "../temp/mixedAbRes.rds")
 ```
 
 ### Klebsiella pneumoniae
-```{r, mixedKpCm}
+```{r mixedKpCm}
 mixedKpRes <- formatResults(kpMod, mixedDmatList$Kp) %>%
     cbind(., mixedList$Kp) %>%
     select(-starts_with("mz"))%>%
@@ -444,7 +444,7 @@ saveRDS(mixedKpRes, file = "../temp/mixedKpRes.rds")
 ```
 
 ### Plot PR and ROC curves for Simulated Mixtures by Number of Spectra in Mixture
-```{r, fig.width = 8, fig.height = 5, results = "hold"}
+```{r simMixPlot, fig.width = 8, fig.height = 5, results = "hold"}
 mixedCurveDat <- mixedCurves %>%
     select(-ends_with("AUC")) %>%
     gather(curveType, curveDat, -n, -orgResults) %>%
@@ -498,7 +498,7 @@ ggsave("../results/mixtureROCCurves.pdf", width = 70, height = 80, units = "mm",
 
 
 ### Plot the AUC of PR and ROC Curves With Increasing Matrix Complexity  
-```{r, fig.width = 6}
+```{r simAuc, fig.width = 6}
 labOrder <- c("Species", 
               "Colistin-Resistant")
 
@@ -528,7 +528,7 @@ mixedCurvesAUC %>%
 ggsave("../results/mixedCurvesAUCPlot.pdf", width = 70, height = 80, units = "mm", useDingbats = F)
 ```
 
-```{r}
+```{r otherSimStats}
 mixedAbRes <- mixedAbRes %>%
     mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Ab_resistant"],
                             "pos", "neg"),
@@ -601,7 +601,7 @@ resStats(mixedKpRes)
 ```
 
 ## Two-Species UTI Mixtures
-```{r}
+```{r twoSpecies}
 # Import simulated mixture spectra features and information
 twoSpeciesSumm <- readRDS("../temp/twoSpeciesSpecInfo.rds")
 
@@ -640,7 +640,7 @@ saveRDS(twoKpRes, file = "../temp/twoKpRes.rds")
 ```
 
 ### Plot scores vs cutoff
-```{r}
+```{r twoSpecScores}
 tholdSpecies <- thold %>%
     filter(str_detect(type, "species")) %>%
     mutate(orgResults = ifelse(str_detect(type, "Ab"),
@@ -691,7 +691,7 @@ ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm"
 ```
 
 ## Session Info  
-```{r, results = "markup"}
+```{r sessionInfo, results = "markup"}
 session_info()
 ```
 
