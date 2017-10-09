@@ -7,7 +7,6 @@ output: github_document
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, 
                       message = FALSE, 
-                      results = "hide", 
                       cache = T,
                       cache.lazy = F)
 ```
@@ -34,7 +33,7 @@ source("../R/extract.R")
 ```
 
 ## Load Data
-```{r loadData}
+```{r loadData, results='hide'}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
                     pattern = "mzXML$",
