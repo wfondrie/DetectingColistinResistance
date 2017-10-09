@@ -1,20 +1,26 @@
 ---
 title: "Strategy Illustrations"
+author: "William E Fondrie"
 output: github_document
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T)
 ```
 
-```{r loadLibraries, results = "hide", echo = FALSE}
-library(tidyverse, quietly = T)
+## Load Libraries and  Prepare Workspace  
+```{r loadLibraries, results = "hide"}
+suppressMessages(library(tidyverse, quietly = T))
 library(MALDIquant, quietly = T)
 library(MALDIquantForeign, quietly = T)
 library(caret, quietly = T)
 library(PRROC, quietly = T)
 library(stringr, quietly = T)
 library(forcats, quietly = T)
+library(devtools, quietly = T)
 
 # ggplot2 theme
 source("../R/ggplotTheme.R")
@@ -29,7 +35,7 @@ set.seed(6554)
 
 ## Feature Creation
 
-```{r}
+```{r createFeatures}
 features <- readRDS("../temp/features.rds")
 features <- filter(features, response == "Ab")
 
@@ -62,6 +68,16 @@ featurePlot <- specDat %>%
 
 featurePlot 
 ggsave("../results/featureSelect_1.pdf", width = 105, height = 100, unit = "mm", useDingbats = F)
+
+singlePlot <- specDat %>%
+    filter(str_detect(type, "res")) %>%
+    ggplot(aes(x = mz, y = relInt)) +
+    geom_line() +
+    xlab(expression(italic("m/z"))) +
+    ylab("Relative Intensity")
+
+singlePlot
+ggsave("../results/singlePlot.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
 
 selectedMz <- features$mz[which.min(abs(features$mz - 2033))] 
 
@@ -113,7 +129,7 @@ ggsave("../results/featureSelect_2_2.pdf",  width = 30, height = 20, unit = "mm"
 
 ## Real vs Simulated Mixture Spectra
 
-```{r}
+```{r realVsSim}
 
 colRanges <- tibble(minMz = c(1300, 1440, 1810),
                     maxMz = c(1430, 1640, 2100),
@@ -300,3 +316,7 @@ feats %>%
 ggsave("../results/interferences.pdf", width = 50, height = 50, units = "mm", useDingbats = F)
 ```
 
+## Session Info
+```{r sessionInfo, results='markup'}
+session_info()
+```

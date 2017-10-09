@@ -1,14 +1,24 @@
 ---
-title: "Make Misc Figures"
+title: "Make Miscellaneous Figures"
+author: "William E Fondrie"
 output: github_document
 ---
 
-# Prepare Workspace
+```{r setup, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T,
+                      cache.lazy = F)
+```
+
+## Load Libraries and  Prepare Workspace
 ```{r loadLibraries, results = "hide"}
 # data manipulation
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(stringr, quietly = T)
 library(forcats, quietly = T)
+library(devtools, quietly = T)
 
 # handling MALDI spectra
 library(MALDIquant, quietly = T)
@@ -23,8 +33,8 @@ source("../R/preProcessSpec.R")
 source("../R/extract.R")
 ```
 
-# load data
-```{r}
+## Load Data
+```{r loadData}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
                     pattern = "mzXML$",
@@ -38,6 +48,8 @@ specInfo <- tibble(fname = files) %>%
            Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), "pos", "other"),
            Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
            Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)))
+
+summary(specInfo)
 
 features <- readRDS("../temp/features.RDS")
 
@@ -54,7 +66,7 @@ feattbl <- spec %>%
   do(extractFeatures(., featureVec = unique(features$mz), tol = 1.5))
 ```
 
-# plot of resistance peaks and their variation
+## Plot of Resistance Peaks and Their Variation
 ```{r peaks}
 # Ab
 abFeat <- c("mz2036.4927")
@@ -80,8 +92,35 @@ ggsave("../results/resPeaks.pdf", width = 105, height = 50, unit = "mm", useDing
 
 ```
 
-# plot of the library
+## Plot of the Isolate Dataset
 ```{r libraryDistro}
+specInfo %>% 
+  group_by(species) %>%
+  mutate(num = length(id)) %>%
+  ungroup() %>%
+  mutate(`Colistin\nResistant` = 
+           ifelse(Ab == "pos" | Kp == "pos", "Colistin-Resistant", NA),
+         `Colistin\nResistant` = 
+           ifelse(Ab == "neg" | Kp == "neg", "Colistin-Susceptible", `Colistin\nResistant`),
+         `Colistin\nResistant` = fct_rev(`Colistin\nResistant`),
+         species = fct_lump(species, 20),
+         species = fct_reorder(species, num)) %>%
+  ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
+  geom_bar(color = "black", width = 0.75) +
+  ylab("Number of Mass Spectra") +
+  scale_fill_discrete(name = NULL, breaks = c("Colistin-Resistant","Colistin-Susceptible")) +
+  coord_flip() +
+  coolTheme +
+  theme(legend.position = c(0.95, 0.25),
+        legend.justification = c(1,0),
+        axis.title.y = element_blank(),
+        legend.background = element_rect(color = "black"),
+        legend.key.size = unit(0.75, "lines"),
+        legend.title = element_blank())
+
+ggsave("../results/library.pdf", height = 125, width = 105, unit = "mm", useDingbats = F)
+
+
 specInfo %>% 
   group_by(species) %>%
   mutate(num = length(id)) %>%
@@ -102,11 +141,19 @@ specInfo %>%
         legend.justification = c(1,0),
         axis.title.y = element_blank(),
         legend.background = element_rect(color = "black"),
-        legend.key.size = unit(0.5, "lines"),
-        legend.title = element_blank())
+        legend.text = element_text(size = 10),
+        legend.key.size = unit(0.75, "lines"),
+        legend.title = element_blank(),
+        axis.text = element_text(size = 10),
+        axis.title.x = element_text(size = 10))
 
-ggsave("../results/library.pdf", height = 50, width = 105, unit = "mm", useDingbats = F)
+ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", useDingbats = F)
 
 summary(specInfo$species)
 length(unique(specInfo$species))
+```
+
+## Session Info
+```{r sessionInfo, results = "markup"}
+session_info()
 ```

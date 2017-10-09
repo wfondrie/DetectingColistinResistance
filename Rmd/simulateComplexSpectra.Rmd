@@ -1,20 +1,23 @@
 ---
 title: "Simulating Glycolipid MALDI-TOF-MS of Complex Samples"
 Author: "William E Fondrie"
-Date: "7/20/17"
 output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE, 
+                      results = "hide", 
+                      cache = T,
+                      cache.lazy = F)
 ```
 
 # Introduction 
-This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~50 Gb of RAM to execute. The machine this was run on had 64 Gb of RAM and 2x AMD Opteron 6272 processors (2.10 GHz).  
+This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~25 Gb of RAM to execute. The machine this was run on had 64 Gb of RAM and 2x AMD Opteron 6272 processors (2.10 GHz).  
 
 # Load Libraries & Prepare Workspace
 ```{r loadLibraries}
-library(tidyverse, quietly = T)
+suppressMessages(library(tidyverse, quietly = T))
 library(MALDIquant, quietly = T)
 library(MALDIquantForeign, quietly = T)
 library(stringr, quietly = T)
@@ -25,6 +28,7 @@ library(devtools, quietly = T)
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
 source("../R/ggplotTheme.R")
+source("../R/createNewFeatureTbl.R")
 
 set.seed(6578548)
 tic()
@@ -70,13 +74,12 @@ selectLinearCombos <- function(n, info) {
         sample_n(size = n, weight = weights)
     
     selected <- speciesSelect %>%
-        left_join(info) %>%
+        left_join(info, by = "species") %>%
         filter(type != paste0(species, res)) %>%
         group_by(species) %>%
         sample_n(size = 1) %>%
         ungroup() %>%
         sample_frac(size = 1) %>%
-        #mutate(coeff = c(1, runif(n-1, 0.1, 1))) # mixed with coefficients [0.1, 1]
         mutate(coeff = c(1, sample(c(1, 0.5, 0.25, 0.1), n-1, replace = T)))
     
     return(selected)
@@ -135,7 +138,7 @@ gc() # garbage collection. Free as much memory as possible.
 
 # Takes ~30 min
 comboSpec <- combos %>% 
-    left_join(spec) %>%
+    left_join(spec, by = c("type", "id")) %>%
     group_by(spec_id) %>%
     group_by(spec_id, id, type) %>%
     do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
@@ -148,8 +151,6 @@ saveRDS(comboSpec, "../temp/comboSpec.rds")
 
 trainIdx <- readRDS("../temp/trainIdx.rds")
 
-# comboSummary <- readRDS("../temp.remote/complexSpectraSummary.rds")
-# comboSpec <- readRDS("../temp.remote/comboSpec.rds")
 
 createMixtureFeatureTbl <- function(trainList, specDf, summaryDat, mzTol) {
     suffix <- if(str_detect(trainList$regex, "Acineto")) "_Ab" else "_Kp"

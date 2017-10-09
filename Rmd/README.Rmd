@@ -3,26 +3,85 @@ title: "Insert Paper Title Here"
 author: "William E Fondrie"
 output: github_document
 ---
-Order of analysis:  
-1. [modelTraining.Rmd]("Rmd/modelTraining.md")  
-2. [simulateComplexSpectra.Rmd]("Rmd/modelTraining.md")  
-3. [evaluateModels.Rmd]("Rmd/evaluateModels.md")    
-4. [makeMiscFigures.Rmd]("Rmd/makeMiscFigures.md")
 
-## Code to run the analysis
-```{r runAnalysis, results='hide'}
-library(knitr)
+```{r, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE,
+                      results = 'hide')
+
+knitr::opts_knit$set(verbose = TRUE)
+```
+
+Order of analysis (see the Rmd subdirectory for details):  
+1. [modelTraining.Rmd]("Rmd/modelTraining.md")  
+2. [simulateComplexSpectra.Rmd]("Rmd/simulateComplexSpectra.md")  
+3. [mixtureAnalysis.Rmd]("Rmd/mixtureAnalysis.md")  
+4. [evaluateModels.Rmd]("Rmd/evaluateModels.md")    
+5. [makeMiscFigures.Rmd]("Rmd/makeMiscFigures.md")  
+6. [illustrations.Rmd]("Rmd/illustrations.md")  
+7. [makeTables.Rmd]("Rmd/makeTables.md")
+
+## Code to run the analysis  
+### Prepare workspace
+```{r prepAnalysis}
+instPckgs <- F # change to "T" to install all packages used in the analyses
+
+if(instPckgs) {
+    install.packages(c("tidyverse",
+                       "stringr",
+                       "forcats",
+                       "MALDIquant",
+                       "MALDIquantForeign",
+                       "caret",
+                       "PRROC",
+                       "xgboost",
+                       "tictoc",
+                       "devtools",
+                       "openxlsx",
+                       "knitr",
+                       "rmarkdown"))
+}
+
+library(rmarkdown)
+library(tictoc)
+
+tic()
+
+# Make results and temp directories:
+dir.create("../temp")
+dir.create("../results")
+
 # Set global parameters for analysis
 mzTol <- 1.5 # m/z tolerance for feature extraction in Da
 saveRDS(mzTol, "../temp/mzTol.rds")
+```
 
-# Run analysis scripts
-#knit("modelTraining.Rmd")
-#knit("simulateComplexSpectra.Rmd")
-knit("evaluateModels.Rmd")
-#knit("makeMiscFigures.Rmd")
+### Run Analysis Scripts  
+```{r runAnalysis}
+render("modelTraining.Rmd") # Trains xgboost models
+render("simulateComplexSpectra.Rmd") # simulates polymicrobial spectra
+render("mixtureAnalysis.Rmd") # Imports spectra from experimental two-species mixtures
+render("evaluateModels.Rmd") # Calculate performance metrics and makes figures
+render("makeMiscFigures.Rmd") # Creates additional figures
+render("illustrations.Rmd") # Creates additional figures for illustrations
+render("writeTables.Rmd") # Creates supplementarly Tables
+```
 
-# Copy GitHub markdown file to top directory
+
+### Copy .md files to top directory  
+```{r mvMarkdown}
 file.copy("README.md", "..", overwrite=T)
 ```
+
+## Session Info
+```{r SessionInfo1, results = "hold"}
+times <- toc()
+
+cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))
+
+session_info()
+```
+
+
+
 

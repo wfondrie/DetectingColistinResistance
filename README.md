@@ -2,96 +2,64 @@ Insert Paper Title Here
 ================
 William E Fondrie
 
-Order of analysis:
-1. [modelTraining.Rmd](%22./Rmd/modelTraining.md%22) 2. [modelTraining.Rmd](%22./Rmd/modelTraining.md%22) 3. [modelTraining.Rmd](%22./Rmd/modelTraining.md%22) 4. [evaluateModels.Rmd](%22./Rmd/evaluateModels.md%22) 5. [modelTraining.Rmd](%22./Rmd/modelTraining.md%22)
+Order of analysis (see the Rmd subdirectory for details):
+1. [modelTraining.Rmd](%22Rmd/modelTraining.md%22)
+2. [simulateComplexSpectra.Rmd](%22Rmd/simulateComplexSpectra.md%22)
+3. [mixtureAnalysis.Rmd](%22Rmd/mixtureAnalysis.md%22)
+4. [evaluateModels.Rmd](%22Rmd/evaluateModels.md%22)
+5. [makeMiscFigures.Rmd](%22Rmd/makeMiscFigures.md%22)
+6. [illustrations.Rmd](%22Rmd/illustrations.md%22)
+7. [makeTables.Rmd](%22Rmd/makeTables.md%22)
+
+Code to run the analysis
+------------------------
+
+### Prepare workspace
 
 ``` r
+instPckgs <- F # change to "T" to install all packages used in the analyses
+
+if(instPckgs) {
+    install.packages(c("tidyverse",
+                       "stringr",
+                       "forcats",
+                       "MALDIquant",
+                       "MALDIquantForeign",
+                       "caret",
+                       "PRROC",
+                       "xgboost",
+                       "tictoc",
+                       "devtools",
+                       "openxlsx",
+                       "knitr"))
+}
+
 library(knitr)
+library(tictoc)
+
+tic()
+
+# Make results and temp directories:
+dir.create("../temp")
+dir.create("../results")
+
 # Set global parameters for analysis
 mzTol <- 1.5 # m/z tolerance for feature extraction in Da
 saveRDS(mzTol, "../temp/mzTol.rds")
 
-# Run analysis scripts
-knit("evaluateModels.Rmd")
+knit("modelTraining.Rmd") # Trains xgboost models
+knit("simulateComplexSpectra.Rmd") # simulates polymicrobial spectra
+knit("mixtureAnalysis.Rmd") # Imports spectra from experimental two-species mixtures
+knit("evaluateModels.Rmd") # Calculate performance metrics and makes figures
+knit("makeMiscFigures.Rmd") # Creates additional figures
+knit("illustrations.Rmd") # Creates additional figures for illustrations
+knit("writeTables.Rmd") # Creates supplementarly Tables
 ```
 
-    ## 
-    ## 
-    ## processing file: evaluateModels.Rmd
-
-    ## 
-      |                                                                       
-      |                                                                 |   0%
-      |                                                                       
-      |.....                                                            |   8%
-    ##   ordinary text without R code
-    ## 
-    ## 
-      |                                                                       
-      |...........                                                      |  17%
-    ## label: loadLibraries (with options) 
-    ## List of 1
-    ##  $ results: chr "hide"
-    ## 
-    ## 
-      |                                                                       
-      |................                                                 |  25%
-    ##   ordinary text without R code
-    ## 
-    ## 
-      |                                                                       
-      |......................                                           |  33%
-    ## label: singles
-    ## 
-      |                                                                       
-      |...........................                                      |  42%
-    ##   ordinary text without R code
-    ## 
-    ## 
-      |                                                                       
-      |................................                                 |  50%
-    ## label: AbSingleSpec
-    ## 
-      |                                                                       
-      |......................................                           |  58%
-    ##   ordinary text without R code
-    ## 
-    ## 
-      |                                                                       
-      |...........................................                      |  67%
-    ## label: KpSingleSpec
-    ## 
-      |                                                                       
-      |.................................................                |  75%
-    ##   ordinary text without R code
-    ## 
-    ## 
-      |                                                                       
-      |......................................................           |  83%
-    ## label: AbPR
-
-    ## 
-      |                                                                       
-      |............................................................     |  92%
-    ##   ordinary text without R code
-    ## 
-    ## 
-      |                                                                       
-      |.................................................................| 100%
-    ## label: KpPR
-
-    ## output file: evaluateModels.md
-
-![](README_files/figure-markdown_github/runAnalysis-1.png)
-
-    ## [1] "evaluateModels.md"
+### Copy .md files to top directory
 
 ``` r
-# Copy GitHub markdown file to top directory
 file.copy("README.md", "..", overwrite=T)
 ```
-
-    ## Warning in file.copy("README.md", "..", overwrite = T): problem copying .
-    ## \README.md to ..\README.md: No such file or directory
 
     ## [1] FALSE
