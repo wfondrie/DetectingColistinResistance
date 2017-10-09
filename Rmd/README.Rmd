@@ -58,13 +58,13 @@ saveRDS(mzTol, "../temp/mzTol.rds")
 
 ### Run Analysis Scripts  
 ```{r runAnalysis}
-render("modelTraining.Rmd") # Trains xgboost models
-render("simulateComplexSpectra.Rmd") # simulates polymicrobial spectra
-render("mixtureAnalysis.Rmd") # Imports spectra from experimental two-species mixtures
-render("evaluateModels.Rmd") # Calculate performance metrics and makes figures
-render("makeMiscFigures.Rmd") # Creates additional figures
-render("illustrations.Rmd") # Creates additional figures for illustrations
-render("writeTables.Rmd") # Creates supplementarly Tables
+render("modelTraining.Rmd", envir = new.env()) # Trains xgboost models
+render("simulateComplexSpectra.Rmd", envir = new.env()) # simulates polymicrobial spectra
+render("mixtureAnalysis.Rmd", envir = new.env()) # Imports spectra from experimental two-species mixtures
+render("evaluateModels.Rmd", envir = new.env()) # Calculate performance metrics and makes figures
+render("makeMiscFigures.Rmd", envir = new.env()) # Creates additional figures
+render("illustrations.Rmd", envir = new.env()) # Creates additional figures for illustrations
+render("writeTables.Rmd", envir = new.env()) # Creates supplementarly Tables
 ```
 
 
