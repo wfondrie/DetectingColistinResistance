@@ -1,7 +1,6 @@
 ---
 title: "Evaluate XGBoost Models"
 author: "William E Fondrie"
-output: github_document
 ---
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center",

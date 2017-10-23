@@ -1,7 +1,6 @@
 ---
 title: "Strategy Illustrations"
 author: "William E Fondrie"
-output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}

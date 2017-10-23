@@ -1,7 +1,6 @@
 ---
 title: "Simulating Glycolipid MALDI-TOF-MS of Complex Samples"
 Author: "William E Fondrie"
-output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}

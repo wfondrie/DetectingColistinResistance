@@ -1,7 +1,6 @@
 ---
 title: "Training XGBoost Models"
 Author: "William E Fondrie"
-output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}

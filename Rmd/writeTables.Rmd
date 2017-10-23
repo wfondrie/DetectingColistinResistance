@@ -1,7 +1,6 @@
 ---
 title: "Write Supplementary Tables"
 author: "William E Fondrie"
-output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}

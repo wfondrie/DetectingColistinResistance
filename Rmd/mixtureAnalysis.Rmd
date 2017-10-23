@@ -1,7 +1,6 @@
 ---
 title: "Analysis of Experimental Two-Species UTI Mixtures"
 author: "William E Fondrie"
-output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}
