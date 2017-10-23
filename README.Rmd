@@ -1,6 +1,6 @@
 ---
 title: "Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids"
-author: "William E Fondrie"
+author: "William E Fondrie, "  
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
     github_document:

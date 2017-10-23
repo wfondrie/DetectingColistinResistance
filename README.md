@@ -1,6 +1,6 @@
 Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids
 ================
-William E Fondrie
+William E Fondrie,
 October 23, 2017
 
 -   [Introduction](#introduction)
