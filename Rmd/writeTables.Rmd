@@ -30,8 +30,7 @@ set.seed(937426)
 
 
 ## Supplementary Table 1  
-
-```{r supp1}
+```{r suppTable1}
 testList <- readRDS("../temp/testDatList.rds")
 abRes <- readRDS("../temp/abRes.rds")
 kpRes <- readRDS("../temp/kpRes.rds")
@@ -67,20 +66,136 @@ kpTest <- createTbl(testList$Kp, kpRes)
 testSetRes <- list(`A. baumannii Test Set` = abTest,
                    `K. pneumoniae Test Set` = kpTest)
 
-#write.xlsx(testSetRes, "../results/testSetResults.xlsx")
-
+write.xlsx(testSetRes, "../results/testSetResults.xlsx")
 ```
 
 ## Supplementary Table 2
-```{r supp2}
-mixedSumm <- readRDS("../temp/complexSpectraSummary.rds")
-mixedComponents <- readRDS("../temp/complexComponents.rds")
+```{r suppTable2}
+mixedSumm <- readRDS("../temp/complexSpectraSummary.rds") %>%
+    mutate(Ab2 = ifelse(Ab == "pos", "Colistin-Resistant", "Other Species"),
+           Ab2 = ifelse(Ab == "neg", "Colistin-Susceptible", Ab2),
+           Kp2 = ifelse(Kp == "pos", "Colistin-Resistant", "Other Species"),
+           Kp2 = ifelse(Kp == "neg", "Colistin-Susceptible", Kp2)) %>%
+    select(-Ab, -Kp) %>%
+    rename(`Spectrum ID` = spec_id,
+           `Number of Species` = n,
+           `A. baumannii Class` = Ab2,
+           `A. baumannii Weight` = AbCoeff,
+           `K. pneumoniae Class` = Kp2,
+           `K. pneumoniae Weight` = KpCoeff)
+
+
+mixedComponents <- readRDS("../temp/complexComponents.rds") %>%
+    select(`Spectrum ID` = spec_id,
+           `Species` = species,
+           `Weight` = coeff,
+           `mzXML File` = fname)
+    
 
 mixedList <- readRDS("../temp/mixtureDatList.rds")
+mixedAbRes <- readRDS("../temp/mixedAbRes.rds")
+mixedKpRes <- readRDS("../temp/mixedKpRes.rds")
+
+createMixedTbl <- function(summDf, resDf) {
+    
+    summDf %>%
+    left_join(resDf) %>%
+    mutate(Class = ifelse(truth == "pos", "Colistin-Resistant", "Other Species"),
+           Class = ifelse(truth == "neg", "Colistin-Susceptible", Class)) %>%
+    rename(`Spectrum ID` = id, 
+           `Colistin-Resistant Score` = pos,
+           `Colistin-Susceptible Score` = neg,
+           `Other Species Score` = other,
+           `Species Score` = speciesVsOther,
+           `Susceptible or Other Species Score` = posVsAll) %>%
+    select(`Spectrum ID`,
+           Class,
+           `Colistin-Resistant Score`,
+           `Colistin-Susceptible Score`,
+           `Other Species Score`,
+           `Species Score`,
+           `Susceptible or Other Species Score`,
+           starts_with("mz"))
+    
+}
+
+abMixed <- createMixedTbl(mixedList$Ab, mixedAbRes)
+kpMixed <- createMixedTbl(mixedList$Kp, mixedKpRes)
+
+simMixTbl <- list(`Sim Spectra Summary` = mixedSumm,
+                  `Sim Spectra Weights` = mixedComponents,
+                  `A. baummannii Results` = abMixed,
+                  `K. pneumoniae Results` = kpMixed)
+
+write.xlsx(simMixTbl, "../results/simMixResults.xlsx")
 ```
 
 
 ## Supplementary Table 4
+```{r, suppTable4}
+twoSumm <- readRDS("../temp/twoSpeciesSpecInfo.rds")
+twoList <- readRDS("../temp/twoSpeciesDatList.rds")
+twoAbRes <- readRDS("../temp/twoAbRes.rds")
+twoKpRes <- readRDS("../temp/twoKpRes.rds")
+
+twoAb <- twoList$Ab %>%
+    left_join(twoAbRes) %>%
+    filter(!is.na(percentEc),
+           Kp == "other") %>%
+    mutate(Class = ifelse(truth == "pos", "Colistin-Resistant", "Other Species"),
+           Class = ifelse(truth == "neg", "Colistin-Susceptible", Class),
+           Class = ifelse(percentEc == 100, "Other Species", Class)) %>%
+    rename(`Percent A. baumannii` = percentTarget,
+           `Percent E. coli` = percentEc,
+           `mzXML file` = fname,
+           `Colistin-Resistant Score` = pos,
+           `Colistin-Susceptible Score` = neg,
+           `Other Species Score` = other,
+           `Species Score` = speciesVsOther,
+           `Susceptible or Other Species Score` = posVsAll) %>%
+    select(`Percent A. baumannii`,
+           `Percent E. coli`,
+           Class,
+           `Colistin-Resistant Score`,
+           `Colistin-Susceptible Score`,
+           `Other Species Score`,
+           `Species Score`,
+           `Susceptible or Other Species Score`,
+           `mzXML file`,
+           starts_with("mz"))
+
+twoKp <- twoList$Kp %>%
+    left_join(twoKpRes) %>%
+    filter(!is.na(percentEc),
+           Ab == "other") %>%
+    mutate(Class = ifelse(truth == "pos", "Colistin-Resistant", "Other Species"),
+           Class = ifelse(truth == "neg", "Colistin-Susceptible", Class),
+           Class = ifelse(percentEc == 100, "Other Species", Class)) %>%
+    rename(`Percent K. pneumoniae` = percentTarget,
+           `Percent E. coli` = percentEc,
+           `mzXML file` = fname,
+           `Colistin-Resistant Score` = pos,
+           `Colistin-Susceptible Score` = neg,
+           `Other Species Score` = other,
+           `Species Score` = speciesVsOther,
+           `Susceptible or Other Species Score` = posVsAll) %>%
+    select(`Percent K. pneumoniae`,
+           `Percent E. coli`,
+           Class,
+           `Colistin-Resistant Score`,
+           `Colistin-Susceptible Score`,
+           `Other Species Score`,
+           `Species Score`,
+           `Susceptible or Other Species Score`,
+           `mzXML file`,
+           starts_with("mz"))
+
+twoMixTbl <- list(`A. baummannii Two-Species Mixtures` = twoAb,
+               `K. pneumoniae Two-Species Mixtures` = twoKp)
+
+write.xlsx(twoMixTbl, "../results/twoMixResults.xlsx")
+```
+
 
 ## Session Info
 ```{r sessionInfo, results='markup'}
