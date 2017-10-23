@@ -636,7 +636,8 @@ twoKpRes <- formatResults(kpMod, twoSpeciesDmatList$Kp) %>%
 
 twoRes <- twoAbRes %>% 
     full_join(twoKpRes) %>%
-    mutate(Colistin = fct_rev(as.factor(Colistin)))
+    mutate(Colistin = fct_rev(as.factor(Colistin))) %>%
+    filter(!(truth == "other" & percentEc != 100))
 
 saveRDS(twoAbRes, file = "../temp/twoAbRes.rds")
 saveRDS(twoKpRes, file = "../temp/twoKpRes.rds")
