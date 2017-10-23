@@ -1,17 +1,17 @@
 ---
 title: "Make Miscellaneous Figures"
-Author: "William E Fondrie"
+author: "William E Fondrie"
 output: github_document
 ---
 
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, 
                       message = FALSE, 
-                      results = "hide", 
-                      cache = T)
+                      cache = T,
+                      cache.lazy = F)
 ```
 
-# Prepare Workspace
+## Load Libraries and  Prepare Workspace
 ```{r loadLibraries, results = "hide"}
 # data manipulation
 suppressMessages(library(tidyverse, quietly = T))
@@ -32,8 +32,8 @@ source("../R/preProcessSpec.R")
 source("../R/extract.R")
 ```
 
-# load data
-```{r}
+## Load Data
+```{r loadData, results='hide'}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
                     pattern = "mzXML$",
@@ -65,7 +65,7 @@ feattbl <- spec %>%
   do(extractFeatures(., featureVec = unique(features$mz), tol = 1.5))
 ```
 
-# plot of resistance peaks and their variation
+## Plot of Resistance Peaks and Their Variation
 ```{r peaks}
 # Ab
 abFeat <- c("mz2036.4927")
@@ -91,7 +91,7 @@ ggsave("../results/resPeaks.pdf", width = 105, height = 50, unit = "mm", useDing
 
 ```
 
-# plot of the library
+## Plot of the Isolate Dataset
 ```{r libraryDistro}
 specInfo %>% 
   group_by(species) %>%
@@ -109,6 +109,7 @@ specInfo %>%
   ylab("Number of Mass Spectra") +
   scale_fill_discrete(name = NULL, breaks = c("Colistin-Resistant","Colistin-Susceptible")) +
   coord_flip() +
+  coolTheme +
   theme(legend.position = c(0.95, 0.25),
         legend.justification = c(1,0),
         axis.title.y = element_blank(),
@@ -147,11 +148,11 @@ specInfo %>%
 
 ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", useDingbats = F)
 
-ummary(specInfo$species)
+summary(specInfo$species)
 length(unique(specInfo$species))
 ```
 
-### Session Info
-```{r}
+## Session Info
+```{r sessionInfo, results = "markup"}
 session_info()
 ```

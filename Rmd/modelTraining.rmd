@@ -11,10 +11,10 @@ knitr::opts_chunk$set(warning = FALSE,
                       cache = T)
 ```
 
-# Introduction  
+## Introduction  
 This file contains the code used to build the XGBoost machine learning models.
 
-# Load Libraries & Prepare Workspace  
+## Load Libraries & Prepare Workspace  
 ```{r loadLibraries}
 # data manipulation
 suppressMessages(library(tidyverse, quietly = T))
@@ -69,7 +69,7 @@ trainIdx <- list(Ab = list(idx = createDataPartition(specInfo$Ab, p = 0.6, list 
 
 ```
 
-# Select Features From Training Data  
+## Select Features From Training Data  
 ```{r determineFeatures, cache = TRUE}
 determineFeatures <- function(trainList, n = 50) {
     
@@ -119,7 +119,7 @@ features <- unique(features)
 saveRDS(features, file = "../temp/features.rds")
 ```
 
-# Extract features from Spectra  
+#W Extract features from Spectra  
 ```{r extractFeatures, cache = TRUE}
 createFeatureTbl <- function(trainList, mzTol, testSet = F) {
     idx <- if(testSet) -trainList$idx else trainList$idx
@@ -166,15 +166,15 @@ trainDatList <- map(trainIdx, createFeatureTbl,
 saveRDS(trainDatList, "../temp/trainDatList.rds")
 ```
 
-# Train the XGBoost Tree Models 
-## Prepare the Data for Model Training  
+## Train the XGBoost Tree Models 
+### Prepare the Data for Model Training  
 ```{r prepareData}
 dmatList <- prepareData(trainDatList, orgLabs = c("Ab", "Kp"))
 saveRDS(dmatList, "../temp/dmatList.rds")
 
 ```
 
-## Tune Hyperparameter by Grid Search  
+### Tune Hyperparameter by Grid Search  
 ```{r xgboost_tune1}
 paramGrid <- expand.grid(max_depth = seq(1, 10, by = 2),
                               min_child_weight = c(0, 1, 2, 3),
@@ -217,14 +217,14 @@ bstParams <- paramRes %>%
 
 ```
 
-## Refine Models
+### Refine Models
 ```{r refinement}
 finalParams <- bstParams %>%
                 group_by(org) %>%
                 do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.01, verbose = T))
 ```
 
-## Final Model
+### Final Model
 ```{r finalModel, results = "none"}
 orgs <- c("Ab", "Kp")
 
@@ -247,7 +247,7 @@ saveRDS(mods, "../temp/finalModels.rds")
 ```
 
 
-# Prepare Test Set
+## Prepare Test Set
 ```{r singles}
 testDatList <- map(trainIdx, createFeatureTbl, 
                    mzTol = featTol,
@@ -256,7 +256,7 @@ testDatList <- map(trainIdx, createFeatureTbl,
 saveRDS(testDatList, "../temp/testDatList.rds")
 ```
 
-# Session Information
+## Session Information
 ```{r sessionInfo, results = "hold"}
 times <- toc()
 cat(c("Executions time:", round((times$toc - times$tic)/60, 0), "min"))

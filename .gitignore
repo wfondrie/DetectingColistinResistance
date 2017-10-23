@@ -1,9 +1,11 @@
 .Rproj.user
 .Rhistory
 .RData
+.RDataTmp
 .Ruserdata
 data/*
 .DS_Store
 temp/*
 notIncluded/*
 results/*
+*cache
