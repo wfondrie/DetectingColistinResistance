@@ -68,7 +68,7 @@ render("path/to/README.Rmd", envir = new.env())
 When this rmarkdown file is rendered, the following code is executed:
 
 ### Prepare workspace
-```{r prepAnalysis, eval = FALSE}
+```{r prepAnalysis, eval = TRUE}
 instPckgs <- FALSE # change to "TRUE" to install all packages used in the analyses
 unzipData <- FALSE # change to "TRUE" to unzip "data.zip" in the data directory
 
@@ -107,7 +107,7 @@ saveRDS(mzTol, "temp/mzTol.rds")
 ```
 
 ### Run Analysis Scripts  
-```{r runAnalysis, eval = FALSE}
+```{r runAnalysis, eval = TRUE}
 render("Rmd/modelTraining.Rmd", envir = new.env()) # Trains xgboost models
 render("Rmd/simulateComplexSpectra.Rmd", envir = new.env()) # simulates polymicrobial spectra
 render("Rmd/mixtureAnalysis.Rmd", envir = new.env()) # Imports spectra from experimental two-species mixtures
@@ -119,7 +119,7 @@ render("Rmd/writeTables.Rmd", envir = new.env()) # Creates supplementarly Tables
 
 
 ## Session Info
-```{r SessionInfo1, results = "hold", eval = F}
+```{r SessionInfo1, results = "hold", eval = TRUE}
 times <- toc()
 
 cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))

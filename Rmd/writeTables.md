@@ -1,146 +1,212 @@
-Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids
+Write Supplementary Tables
 ================
-William E Fondrie,
-October 23, 2017
+William E Fondrie
 
--   [Introduction](#introduction)
--   [Directory structure](#directory-structure)
--   [Code to run the analysis](#code-to-run-the-analysis)
-    -   [Prepare workspace](#prepare-workspace)
-    -   [Run Analysis Scripts](#run-analysis-scripts)
+-   [Load Libraries](#load-libraries)
+-   [Supplementary Table 1](#supplementary-table-1)
+-   [Supplementary Table 2](#supplementary-table-2)
+-   [Supplementary Table 4](#supplementary-table-4)
 -   [Session Info](#session-info)
 
-Introduction
-------------
-
-This repository contains the code and data required to reproduce the analysis presented in [*Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids*]().
-
-**WARNING:** When attempting to reproduce this analysis, it should be noted that `Rmd/simulateCompleSpectra.Rmd` requires approximately 50 Gb of memory to execute. Additionally, the entire analysis time may take a number of hours depending on the hardware.
-
-Order of analysis (see the Rmd subdirectory for details):
-1. [modelTraining.Rmd](%22Rmd/modelTraining.md%22)
-2. [simulateComplexSpectra.Rmd](%22Rmd/simulateComplexSpectra.md%22)
-3. [mixtureAnalysis.Rmd](%22Rmd/mixtureAnalysis.md%22)
-4. [evaluateModels.Rmd](%22Rmd/evaluateModels.md%22)
-5. [makeMiscFigures.Rmd](%22Rmd/makeMiscFigures.md%22)
-6. [illustrations.Rmd](%22Rmd/illustrations.md%22)
-7. [makeTables.Rmd](%22Rmd/makeTables.md%22)
-
-Directory structure
--------------------
-
-To reproduce this analysis, the project directory must be structured as follows:
-
-    |- README.Rmd
-    |- data
-    |  `- data.zip
-    |- R
-    |  |- createNewFeatureTbl.R
-    |  |- ggplotTheme.R
-    |  |- utilityFunctions.R
-    |  |- prepareData.R
-    |  |- extract.R
-    |  `- preProcessSpec.R
-    `- Rmd
-       |- evaluateModels.Rmd
-       |- illustrations.Rmd
-       |- makeMiscFigures.Rmd
-       |- mixtureAnalysis.Rmd
-       |- modelTraining.Rmd
-       |- simulateComplexSpectra.Rmd
-       `- writeTables.Rmd
-
-Code to run the analysis
-------------------------
-
-With a correctly prepared directory, the entire analysis can be run with a single line of code. Also, take note of the `instPckgs` variable in the "Prepare workspace" section below. If you system does not have all of these packages already installed, change this variable to `TRUE`.
-
-To run the analysis:
+Load Libraries
+--------------
 
 ``` r
-render("path/to/README.Rmd", envir = new.env())
+# data manipulation
+suppressMessages(library(tidyverse, quietly = T))
+library(stringr, quietly = T)
+library(forcats, quietly = T)
+library(devtools)
+
+# writing to excel files
+library(openxlsx, quietly = T)
+
+# other functions
+source("../R/utilityFunctions.R")
+
+# for reproducibility
+set.seed(937426)
 ```
 
-When this rmarkdown file is rendered, the following code is executed:
-
-### Prepare workspace
+Supplementary Table 1
+---------------------
 
 ``` r
-instPckgs <- FALSE # change to "TRUE" to install all packages used in the analyses
-unzipData <- FALSE # change to "TRUE" to unzip "data.zip" in the data directory
+testList <- readRDS("../temp/testDatList.rds")
+abRes <- readRDS("../temp/abRes.rds")
+kpRes <- readRDS("../temp/kpRes.rds")
 
-if(instPckgs) {
-    install.packages(c("tidyverse",
-                       "stringr",
-                       "forcats",
-                       "MALDIquant",
-                       "MALDIquantForeign",
-                       "caret",
-                       "PRROC",
-                       "xgboost",
-                       "tictoc",
-                       "devtools",
-                       "openxlsx",
-                       "knitr",
-                       "rmarkdown"))
+createTbl <- function(summDf, resDf) {
+    
+    summDf %>%
+    cbind(resDf) %>%
+    mutate(Class = ifelse(truth == "pos", "Colistin-Resistant", "Other Species"),
+           Class = ifelse(truth == "neg", "Colistin-Susceptible", Class),
+           type = str_replace(type, " - .+$", ""),
+           type = str_replace(type, " [^ ]*[0-9].*$", "")) %>%
+    rename(Species = type, 
+           `Colistin-Resistant Score` = pos,
+           `Colistin-Susceptible Score` = neg,
+           `Other Species Score` = other,
+           `Species Score` = speciesVsOther,
+           `Susceptible or Other Species Score` = posVsAll) %>%
+    select(Species,
+           Class,
+           `Colistin-Resistant Score`,
+           `Colistin-Susceptible Score`,
+           `Other Species Score`,
+           `Species Score`,
+           `Susceptible or Other Species Score`,
+           starts_with("mz"))
+    
 }
 
-if(unzipData) {
-    unzip("data/data.zip", overwrite = T, exdir = "../data")
+abTest <- createTbl(testList$Ab, abRes)
+kpTest <- createTbl(testList$Kp, kpRes)
+
+testSetRes <- list(`A. baumannii Test Set` = abTest,
+                   `K. pneumoniae Test Set` = kpTest)
+
+write.xlsx(testSetRes, "../results/testSetResults.xlsx")
+```
+
+Supplementary Table 2
+---------------------
+
+``` r
+mixedSumm <- readRDS("../temp/complexSpectraSummary.rds") %>%
+    mutate(Ab2 = ifelse(Ab == "pos", "Colistin-Resistant", "Other Species"),
+           Ab2 = ifelse(Ab == "neg", "Colistin-Susceptible", Ab2),
+           Kp2 = ifelse(Kp == "pos", "Colistin-Resistant", "Other Species"),
+           Kp2 = ifelse(Kp == "neg", "Colistin-Susceptible", Kp2)) %>%
+    select(-Ab, -Kp) %>%
+    rename(`Spectrum ID` = spec_id,
+           `Number of Species` = n,
+           `A. baumannii Class` = Ab2,
+           `A. baumannii Weight` = AbCoeff,
+           `K. pneumoniae Class` = Kp2,
+           `K. pneumoniae Weight` = KpCoeff)
+
+
+mixedComponents <- readRDS("../temp/complexComponents.rds") %>%
+    select(`Spectrum ID` = spec_id,
+           `Species` = species,
+           `Weight` = coeff,
+           `mzXML File` = fname)
+    
+
+mixedList <- readRDS("../temp/mixtureDatList.rds")
+mixedAbRes <- readRDS("../temp/mixedAbRes.rds")
+mixedKpRes <- readRDS("../temp/mixedKpRes.rds")
+
+createMixedTbl <- function(summDf, resDf) {
+    
+    summDf %>%
+    left_join(resDf) %>%
+    mutate(Class = ifelse(truth == "pos", "Colistin-Resistant", "Other Species"),
+           Class = ifelse(truth == "neg", "Colistin-Susceptible", Class)) %>%
+    rename(`Spectrum ID` = id, 
+           `Colistin-Resistant Score` = pos,
+           `Colistin-Susceptible Score` = neg,
+           `Other Species Score` = other,
+           `Species Score` = speciesVsOther,
+           `Susceptible or Other Species Score` = posVsAll) %>%
+    select(`Spectrum ID`,
+           Class,
+           `Colistin-Resistant Score`,
+           `Colistin-Susceptible Score`,
+           `Other Species Score`,
+           `Species Score`,
+           `Susceptible or Other Species Score`,
+           starts_with("mz"))
+    
 }
 
-library(rmarkdown)
-library(tictoc)
+abMixed <- createMixedTbl(mixedList$Ab, mixedAbRes)
+kpMixed <- createMixedTbl(mixedList$Kp, mixedKpRes)
 
-tic()
+simMixTbl <- list(`Sim Spectra Summary` = mixedSumm,
+                  `Sim Spectra Weights` = mixedComponents,
+                  `A. baummannii Results` = abMixed,
+                  `K. pneumoniae Results` = kpMixed)
 
-# Make results and temp directories:
-dir.create("temp")
-dir.create("results")
-
-# Set global parameters for analysis
-mzTol <- 1.5 # m/z tolerance for feature extraction in Da
-saveRDS(mzTol, "temp/mzTol.rds")
+write.xlsx(simMixTbl, "../results/simMixResults.xlsx")
 ```
 
-### Run Analysis Scripts
+Supplementary Table 4
+---------------------
 
 ``` r
-render("Rmd/modelTraining.Rmd", envir = new.env()) # Trains xgboost models
-render("Rmd/simulateComplexSpectra.Rmd", envir = new.env()) # simulates polymicrobial spectra
-render("Rmd/mixtureAnalysis.Rmd", envir = new.env()) # Imports spectra from experimental two-species mixtures
-render("Rmd/evaluateModels.Rmd", envir = new.env()) # Calculate performance metrics and makes figures
+twoSumm <- readRDS("../temp/twoSpeciesSpecInfo.rds")
+twoList <- readRDS("../temp/twoSpeciesDatList.rds")
+twoAbRes <- readRDS("../temp/twoAbRes.rds")
+twoKpRes <- readRDS("../temp/twoKpRes.rds")
+
+twoAb <- twoList$Ab %>%
+    left_join(twoAbRes) %>%
+    filter(!is.na(percentEc),
+           Kp == "other") %>%
+    mutate(Class = ifelse(truth == "pos", "Colistin-Resistant", "Other Species"),
+           Class = ifelse(truth == "neg", "Colistin-Susceptible", Class),
+           Class = ifelse(percentEc == 100, "Other Species", Class)) %>%
+    rename(`Percent A. baumannii` = percentTarget,
+           `Percent E. coli` = percentEc,
+           `mzXML file` = fname,
+           `Colistin-Resistant Score` = pos,
+           `Colistin-Susceptible Score` = neg,
+           `Other Species Score` = other,
+           `Species Score` = speciesVsOther,
+           `Susceptible or Other Species Score` = posVsAll) %>%
+    select(`Percent A. baumannii`,
+           `Percent E. coli`,
+           Class,
+           `Colistin-Resistant Score`,
+           `Colistin-Susceptible Score`,
+           `Other Species Score`,
+           `Species Score`,
+           `Susceptible or Other Species Score`,
+           `mzXML file`,
+           starts_with("mz"))
+
+twoKp <- twoList$Kp %>%
+    left_join(twoKpRes) %>%
+    filter(!is.na(percentEc),
+           Ab == "other") %>%
+    mutate(Class = ifelse(truth == "pos", "Colistin-Resistant", "Other Species"),
+           Class = ifelse(truth == "neg", "Colistin-Susceptible", Class),
+           Class = ifelse(percentEc == 100, "Other Species", Class)) %>%
+    rename(`Percent K. pneumoniae` = percentTarget,
+           `Percent E. coli` = percentEc,
+           `mzXML file` = fname,
+           `Colistin-Resistant Score` = pos,
+           `Colistin-Susceptible Score` = neg,
+           `Other Species Score` = other,
+           `Species Score` = speciesVsOther,
+           `Susceptible or Other Species Score` = posVsAll) %>%
+    select(`Percent K. pneumoniae`,
+           `Percent E. coli`,
+           Class,
+           `Colistin-Resistant Score`,
+           `Colistin-Susceptible Score`,
+           `Other Species Score`,
+           `Species Score`,
+           `Susceptible or Other Species Score`,
+           `mzXML file`,
+           starts_with("mz"))
+
+twoMixTbl <- list(`A. baummannii Two-Species Mixtures` = twoAb,
+               `K. pneumoniae Two-Species Mixtures` = twoKp)
+
+write.xlsx(twoMixTbl, "../results/twoMixResults.xlsx")
 ```
-
-![](README_files/figure-markdown_github-ascii_identifiers/runAnalysis-1.png)
-
-``` r
-render("Rmd/makeMiscFigures.Rmd", envir = new.env()) # Creates additional figures
-```
-
-![](README_files/figure-markdown_github-ascii_identifiers/runAnalysis-2.png)
-
-``` r
-render("Rmd/illustrations.Rmd", envir = new.env()) # Creates additional figures for illustrations
-render("Rmd/writeTables.Rmd", envir = new.env()) # Creates supplementarly Tables
-```
-
-![](README_files/figure-markdown_github-ascii_identifiers/runAnalysis-3.png)
 
 Session Info
 ------------
 
 ``` r
-times <- toc()
-
-cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))
-
 session_info()
 ```
 
-    ## 41091.37 sec elapsed
-    ## Execution time: 685 min
-    ## 
     ##  setting  value                       
     ##  version  R version 3.4.0 (2017-04-21)
     ##  system   x86_64, mingw32             
