@@ -166,22 +166,8 @@ specInfo %>%
 ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", useDingbats = F)
 
 summary(specInfo$species)
-```
-
-    ##                        V1     
-    ##  Acinetobacter baumannii:647  
-    ##  Klebsiella pneumoniae  :317  
-    ##  Pseudomonas aeruginosa :149  
-    ##  Serratia marcescens    :111  
-    ##  Staphylococcus aureus  :110  
-    ##  Enterobacter cloacae   :100  
-    ##  (Other)                :663
-
-``` r
 length(unique(specInfo$species))
 ```
-
-    ## [1] 50
 
 Session Info
 ------------

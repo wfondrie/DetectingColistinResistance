@@ -79,11 +79,15 @@ singlePlot <- specDat %>%
     geom_line() +
     xlab(expression(italic("m/z"))) +
     ylab("Relative Intensity")
-
-singlePlot
 ```
 
 ![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-2.png)
+
+``` r
+singlePlot
+```
+
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-3.png)
 
 ``` r
 ggsave("../results/singlePlot.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
@@ -113,7 +117,7 @@ featurePlotZoom1 <- specDat %>%
 featurePlotZoom1
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-3.png)
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-4.png)
 
 ``` r
 ggsave("../results/featureSelect_2_1.pdf",  width = 30, height = 20, unit = "mm", useDingbats = F)
@@ -136,7 +140,7 @@ featurePlotZoom2 <- specDat %>%
 featurePlotZoom2
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-4.png)
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-5.png)
 
 ``` r
 ggsave("../results/featureSelect_2_2.pdf",  width = 30, height = 20, unit = "mm", useDingbats = F)
@@ -394,6 +398,7 @@ session_info()
     ##  dimRed               0.1.0    2017-05-04 CRAN (R 3.4.2)
     ##  dplyr              * 0.7.4    2017-09-28 CRAN (R 3.4.2)
     ##  DRR                  0.0.2    2016-09-15 CRAN (R 3.4.2)
+    ##  e1071                1.6-8    2017-02-02 CRAN (R 3.4.2)
     ##  evaluate             0.10.1   2017-06-24 CRAN (R 3.4.2)
     ##  forcats            * 0.2.0    2017-01-23 CRAN (R 3.4.2)
     ##  foreach              1.4.3    2015-10-13 CRAN (R 3.4.2)
@@ -453,6 +458,7 @@ session_info()
     ##  robustbase           0.92-7   2016-12-09 CRAN (R 3.4.2)
     ##  rpart                4.1-11   2017-03-13 CRAN (R 3.4.2)
     ##  rprojroot            1.2      2017-01-16 CRAN (R 3.4.2)
+    ##  rstudioapi           0.7      2017-09-07 CRAN (R 3.4.2)
     ##  rvest                0.3.2    2016-06-17 CRAN (R 3.4.2)
     ##  scales               0.5.0    2017-08-24 CRAN (R 3.4.2)
     ##  sfsmisc              1.1-1    2017-06-08 CRAN (R 3.4.2)
@@ -463,7 +469,6 @@ session_info()
     ##  stringr            * 1.2.0    2017-02-18 CRAN (R 3.4.2)
     ##  survival             2.41-3   2017-04-04 CRAN (R 3.4.2)
     ##  tibble             * 1.3.4    2017-08-22 CRAN (R 3.4.2)
-    ##  tictoc             * 1.0      2014-06-17 CRAN (R 3.4.1)
     ##  tidyr              * 0.7.2    2017-10-16 CRAN (R 3.4.2)
     ##  tidyselect           0.2.2    2017-10-10 CRAN (R 3.4.2)
     ##  tidyverse          * 1.1.1    2017-01-27 CRAN (R 3.4.2)

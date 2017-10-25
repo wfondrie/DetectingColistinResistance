@@ -4,14 +4,15 @@ author: "William E Fondrie, "
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
     github_document:
-        html_preview: true
+        html_preview: false
         toc: true
         toc_depth: 3
 ---
 
 ```{r, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, 
-                      message = FALSE)
+                      message = FALSE,
+                      results = "false")
 
 knitr::opts_knit$set(verbose = TRUE)
 ```

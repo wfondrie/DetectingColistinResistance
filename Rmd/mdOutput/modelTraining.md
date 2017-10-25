@@ -5,7 +5,7 @@ Training XGBoost Models
 -   [Load Libraries & Prepare Workspace](#load-libraries-prepare-workspace)
 -   [Partition Data](#partition-data)
     -   [Select Features From Training Data](#select-features-from-training-data)
--   [W Extract features from Spectra](#w-extract-features-from-spectra)
+    -   [Extract features from Spectra](#extract-features-from-spectra)
     -   [Train the XGBoost Tree Models](#train-the-xgboost-tree-models)
         -   [Prepare the Data for Model Training](#prepare-the-data-for-model-training)
         -   [Tune Hyperparameter by Grid Search](#tune-hyperparameter-by-grid-search)
@@ -128,8 +128,8 @@ features <- unique(features)
 saveRDS(features, file = "../temp/features.rds")
 ```
 
-W Extract features from Spectra
-===============================
+Extract features from Spectra
+-----------------------------
 
 ``` r
 createFeatureTbl <- function(trainList, mzTol, testSet = F) {

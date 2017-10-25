@@ -151,7 +151,7 @@ AbPrCurve <- prAb %>%
 AbPrCurve
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/AbPR-1.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/AbPR-1.png)
 
 ``` r
 ggsave("../results/AbPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
@@ -186,7 +186,7 @@ AbRocCurve <- rocAb %>%
 AbRocCurve
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/AbPR-2.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/AbPR-2.png)
 
 ``` r
 ggsave("../results/AbRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
@@ -221,7 +221,7 @@ prKp %>%
     ggtitle(expression(italic("K. pneumoniae")))
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/KpPR-1.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/KpPR-1.png)
 
 ``` r
 ggsave("../results/KpPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
@@ -230,7 +230,7 @@ ggsave("../results/KpPrCurve.pdf", width = 70, height = 50, units = "mm", useDin
 rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/KpPR-2.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/KpPR-2.png)
 
 ``` r
 rocKp <- as.tibble(rbind(kpPosROC$curve, 
@@ -258,7 +258,7 @@ rocKp %>%
     ggtitle(expression(italic("K. pneumoniae")))
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/KpPR-3.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/KpPR-3.png)
 
 ``` r
 ggsave("../results/KpRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
@@ -293,75 +293,12 @@ abRes2 <- abRes %>%
 # Ab Species
 confusionMatrix(data = abRes2$specPred, reference = abRes2$specTruth, 
                 positive = "Ab", mode = "everything")
-```
 
-    ## Confusion Matrix and Statistics
-    ## 
-    ##           Reference
-    ## Prediction  Ab other
-    ##      Ab    252     0
-    ##      other   6   580
-    ##                                           
-    ##                Accuracy : 0.9928          
-    ##                  95% CI : (0.9845, 0.9974)
-    ##     No Information Rate : 0.6921          
-    ##     P-Value [Acc > NIR] : < 2e-16         
-    ##                                           
-    ##                   Kappa : 0.9831          
-    ##  Mcnemar's Test P-Value : 0.04123         
-    ##                                           
-    ##             Sensitivity : 0.9767          
-    ##             Specificity : 1.0000          
-    ##          Pos Pred Value : 1.0000          
-    ##          Neg Pred Value : 0.9898          
-    ##               Precision : 1.0000          
-    ##                  Recall : 0.9767          
-    ##                      F1 : 0.9882          
-    ##              Prevalence : 0.3079          
-    ##          Detection Rate : 0.3007          
-    ##    Detection Prevalence : 0.3007          
-    ##       Balanced Accuracy : 0.9884          
-    ##                                           
-    ##        'Positive' Class : Ab              
-    ## 
-
-``` r
 # Colistin-Resistant Ab
 confusionMatrix(data = abRes2$posPred, reference = abRes2$posTruth, 
                 positive = "pos", mode = "everything")
-```
 
-    ## Confusion Matrix and Statistics
-    ## 
-    ##           Reference
-    ## Prediction neg pos
-    ##        neg 778   1
-    ##        pos  24  35
-    ##                                           
-    ##                Accuracy : 0.9702          
-    ##                  95% CI : (0.9563, 0.9806)
-    ##     No Information Rate : 0.957           
-    ##     P-Value [Acc > NIR] : 0.03169         
-    ##                                           
-    ##                   Kappa : 0.722           
-    ##  Mcnemar's Test P-Value : 1.083e-05       
-    ##                                           
-    ##             Sensitivity : 0.97222         
-    ##             Specificity : 0.97007         
-    ##          Pos Pred Value : 0.59322         
-    ##          Neg Pred Value : 0.99872         
-    ##               Precision : 0.59322         
-    ##                  Recall : 0.97222         
-    ##                      F1 : 0.73684         
-    ##              Prevalence : 0.04296         
-    ##          Detection Rate : 0.04177         
-    ##    Detection Prevalence : 0.07041         
-    ##       Balanced Accuracy : 0.97115         
-    ##                                           
-    ##        'Positive' Class : pos             
-    ## 
 
-``` r
 kpRes2 <- kpRes %>%
     mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Kp_resistant"],
                             "pos", "neg"),
@@ -373,73 +310,11 @@ kpRes2 <- kpRes %>%
 # Kp Species
 confusionMatrix(data = kpRes2$specPred, reference = kpRes2$specTruth, 
                 positive = "Kp", mode = "everything")
-```
 
-    ## Confusion Matrix and Statistics
-    ## 
-    ##           Reference
-    ## Prediction  Kp other
-    ##      Kp    123     7
-    ##      other   3   704
-    ##                                           
-    ##                Accuracy : 0.9881          
-    ##                  95% CI : (0.9781, 0.9943)
-    ##     No Information Rate : 0.8495          
-    ##     P-Value [Acc > NIR] : <2e-16          
-    ##                                           
-    ##                   Kappa : 0.9539          
-    ##  Mcnemar's Test P-Value : 0.3428          
-    ##                                           
-    ##             Sensitivity : 0.9762          
-    ##             Specificity : 0.9902          
-    ##          Pos Pred Value : 0.9462          
-    ##          Neg Pred Value : 0.9958          
-    ##               Precision : 0.9462          
-    ##                  Recall : 0.9762          
-    ##                      F1 : 0.9609          
-    ##              Prevalence : 0.1505          
-    ##          Detection Rate : 0.1470          
-    ##    Detection Prevalence : 0.1553          
-    ##       Balanced Accuracy : 0.9832          
-    ##                                           
-    ##        'Positive' Class : Kp              
-    ## 
-
-``` r
 # Colistin-Resistant Kp
 confusionMatrix(data = kpRes2$posPred, reference = kpRes2$posTruth, 
                 positive = "pos", mode = "everything")
 ```
-
-    ## Confusion Matrix and Statistics
-    ## 
-    ##           Reference
-    ## Prediction neg pos
-    ##        neg 651   2
-    ##        pos  99  85
-    ##                                           
-    ##                Accuracy : 0.8793          
-    ##                  95% CI : (0.8553, 0.9006)
-    ##     No Information Rate : 0.8961          
-    ##     P-Value [Acc > NIR] : 0.9473          
-    ##                                           
-    ##                   Kappa : 0.5661          
-    ##  Mcnemar's Test P-Value : <2e-16          
-    ##                                           
-    ##             Sensitivity : 0.9770          
-    ##             Specificity : 0.8680          
-    ##          Pos Pred Value : 0.4620          
-    ##          Neg Pred Value : 0.9969          
-    ##               Precision : 0.4620          
-    ##                  Recall : 0.9770          
-    ##                      F1 : 0.6273          
-    ##              Prevalence : 0.1039          
-    ##          Detection Rate : 0.1016          
-    ##    Detection Prevalence : 0.2198          
-    ##       Balanced Accuracy : 0.9225          
-    ##                                           
-    ##        'Positive' Class : pos             
-    ## 
 
 Variable Importance
 -------------------
@@ -490,7 +365,7 @@ vImp %>%
     ggtitle(expression(italic("A. baumannii")))
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/varImp-1.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/varImp-1.png)
 
 ``` r
 ggsave("../results/vImpAbPlot.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
@@ -498,7 +373,7 @@ ggsave("../results/vImpAbPlot.pdf", width = 70, height = 50, units = "mm", useDi
 saveRDS(vImpAb, "../temp/vImpAb.rds")
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/varImp-2.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/varImp-2.png)
 
 ``` r
 # Klebsiella
@@ -520,7 +395,7 @@ vImp %>%
     ggtitle(expression(italic("K. pneumoniae")))
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/varImp-3.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/varImp-3.png)
 
 ``` r
 ggsave("../results/vImpKpPlot.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
@@ -658,7 +533,7 @@ mixedCurveDat %>%
           axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/simMixPlot-1.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/simMixPlot-1.png)
 
 ``` r
 ggsave("../results/mixturePRCurves.pdf", width = 70, height = 80, units = "mm", useDingbats = F)
@@ -682,7 +557,7 @@ mixedCurveDat %>%
           axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/simMixPlot-2.png" style="display: block; margin: auto;" /><img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/simMixPlot-3.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/simMixPlot-2.png)![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/simMixPlot-3.png)
 
 ``` r
 ggsave("../results/mixtureROCCurves.pdf", width = 70, height = 80, units = "mm", useDingbats = F)
@@ -718,7 +593,7 @@ mixedCurvesAUC %>%
           legend.position = "bottom")
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/simAuc-1.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/simAuc-1.png)
 
 ``` r
 ggsave("../results/mixedCurvesAUCPlot.pdf", width = 70, height = 80, units = "mm", useDingbats = F)
@@ -982,7 +857,7 @@ twoRes %>%
     ylim(c(0, 1))
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/twoSpecScores-1.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/twoSpecScores-1.png)
 
 ``` r
 ggsave("../results/twoSpeciesSpecRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)
@@ -995,7 +870,7 @@ tholdRes <- thold %>%
                                "K. pneumoniae"))
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/twoSpecScores-2.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/twoSpecScores-2.png)
 
 ``` r
 twoRes %>%
@@ -1013,7 +888,7 @@ twoRes %>%
     ylim(c(0, 1))
 ```
 
-<img src="C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/twoSpecScores-3.png" style="display: block; margin: auto;" />
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\evaluateModels_files/figure-markdown_github-ascii_identifiers/twoSpecScores-3.png)
 
 ``` r
 ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)

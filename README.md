@@ -130,7 +130,7 @@ files <- c("modelTraining", # Trains xgboost models
 files <- paste0("Rmd/", files, ".Rmd")
 ```
 
-Now run the analysis
+Now run the analysis:
 
 ``` r
 runAnalysis(files)
