@@ -84,6 +84,7 @@ if(instPckgs) {
                        "tictoc",
                        "devtools",
                        "openxlsx",
+                       "e1071",
                        "knitr",
                        "rmarkdown"))
 }
