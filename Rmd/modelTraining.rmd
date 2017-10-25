@@ -118,7 +118,7 @@ features <- unique(features)
 saveRDS(features, file = "../temp/features.rds")
 ```
 
-#W Extract features from Spectra  
+## Extract features from Spectra  
 ```{r extractFeatures, cache = TRUE}
 createFeatureTbl <- function(trainList, mzTol, testSet = F) {
     idx <- if(testSet) -trainList$idx else trainList$idx
@@ -216,14 +216,14 @@ bstParams <- paramRes %>%
 
 ```
 
-### Refine Models
+### Refine Models  
 ```{r refinement}
 finalParams <- bstParams %>%
                 group_by(org) %>%
                 do(optimizeXgbParams(., dmatList[[.$org]]$dat, 0.01, verbose = T))
 ```
 
-### Final Model
+### Final Model  
 ```{r finalModel, results = "none"}
 orgs <- c("Ab", "Kp")
 
@@ -246,7 +246,7 @@ saveRDS(mods, "../temp/finalModels.rds")
 ```
 
 
-## Prepare Test Set
+## Prepare Test Set  
 ```{r singles}
 testDatList <- map(trainIdx, createFeatureTbl, 
                    mzTol = featTol,
@@ -255,7 +255,7 @@ testDatList <- map(trainIdx, createFeatureTbl,
 saveRDS(testDatList, "../temp/testDatList.rds")
 ```
 
-## Session Information
+## Session Information  
 ```{r sessionInfo, results = "hold"}
 times <- toc()
 cat(c("Executions time:", round((times$toc - times$tic)/60, 0), "min"))

@@ -3,8 +3,7 @@ title: "Evaluate XGBoost Models"
 author: "William E Fondrie"
 ---
 ```{r setup, include = FALSE, cache = FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.align = "center",
-                      fig.height = 3.5, fig.width =6)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
 ```
 
 ## Load Libraries & Prepare Workspace
@@ -443,7 +442,7 @@ saveRDS(mixedKpRes, file = "../temp/mixedKpRes.rds")
 ```
 
 ### Plot PR and ROC curves for Simulated Mixtures by Number of Spectra in Mixture
-```{r simMixPlot, fig.width = 8, fig.height = 5}
+```{r simMixPlot}
 mixedCurveDat <- mixedCurves %>%
     select(-ends_with("AUC")) %>%
     gather(curveType, curveDat, -n, -orgResults) %>%
@@ -497,7 +496,7 @@ ggsave("../results/mixtureROCCurves.pdf", width = 70, height = 80, units = "mm",
 
 
 ### Plot the AUC of PR and ROC Curves With Increasing Matrix Complexity  
-```{r simAuc, fig.width = 6}
+```{r simAuc}
 labOrder <- c("Species", 
               "Colistin-Resistant")
 
@@ -527,7 +526,7 @@ mixedCurvesAUC %>%
 ggsave("../results/mixedCurvesAUCPlot.pdf", width = 70, height = 80, units = "mm", useDingbats = F)
 ```
 
-```{r otherSimStats}
+```{r otherSimStats, results = 'markup'}
 mixedAbRes <- mixedAbRes %>%
     mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Ab_resistant"],
                             "pos", "neg"),
