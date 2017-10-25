@@ -11,8 +11,7 @@ output:
 
 ```{r, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, 
-                      message = FALSE,
-                      results = 'hide')
+                      message = FALSE)
 
 knitr::opts_knit$set(verbose = TRUE)
 ```
@@ -24,13 +23,13 @@ This repository contains the code and data required to reproduce the analysis pr
 **WARNING:** When attempting to reproduce this analysis, it should be noted that `Rmd/simulateCompleSpectra.Rmd` requires approximately 50 Gb of memory to execute. Additionally, the entire analysis time may take a number of hours depending on the hardware.
 
 Order of analysis (see the Rmd subdirectory for details):  
-1. [modelTraining.Rmd]("Rmd/modelTraining.md")  
-2. [simulateComplexSpectra.Rmd]("Rmd/simulateComplexSpectra.md")  
-3. [mixtureAnalysis.Rmd]("Rmd/mixtureAnalysis.md")  
-4. [evaluateModels.Rmd]("Rmd/evaluateModels.md")    
-5. [makeMiscFigures.Rmd]("Rmd/makeMiscFigures.md")  
-6. [illustrations.Rmd]("Rmd/illustrations.md")  
-7. [makeTables.Rmd]("Rmd/makeTables.md")
+1. [modelTraining.Rmd](Rmd/mdOutput/modelTraining.md)  
+2. [simulateComplexSpectra.Rmd](Rmd/mdOutput/simulateComplexSpectra.md)  
+3. [mixtureAnalysis.Rmd](Rmd/mdOutput/mixtureAnalysis.md)  
+4. [evaluateModels.Rmd](Rmd/mdOutput/evaluateModels.md)    
+5. [makeMiscFigures.Rmd](Rmd/mdOutput/makeMiscFigures.md)  
+6. [illustrations.Rmd](Rmd/mdOutput/illustrations.md)  
+7. [makeTables.Rmd](Rmd/mdOutput/makeTables.md)
 
 ## Directory structure  
 To reproduce this analysis, the project directory must be structured as 
@@ -57,8 +56,27 @@ follows:
 
 ```
 
+## Install necessary packages  
+This analysis uses a number of R packages. To ensure that all of them are installed on your machine, you can execute the following:  
+```{r installPkgs, eval = FALSE}
+install.packages(c("tidyverse",
+                   "stringr",
+                   "forcats",
+                   "MALDIquant",
+                   "MALDIquantForeign",
+                   "caret",
+                   "PRROC",
+                   "xgboost",
+                   "tictoc",
+                   "devtools",
+                   "openxlsx",
+                   "e1071",
+                   "knitr",
+                   "rmarkdown"))
+```
+
 ## Code to run the analysis 
-With a correctly prepared directory, the entire analysis can be run with a single line of code. Also, take note of the `instPckgs` variable in the "Prepare workspace" section below. If you system does not have all of these packages already installed, change this variable to `TRUE`.
+With a correctly prepared directory, the entire analysis can be run with a single line of code. If it is your fist time running the analysis, you can unzip the `data/data.zip` into the `data` directory manually, or change `unzipData` to `TRUE` in the next section.
 
 To run the analysis:
 ```{r runFullAnalysis, eval = FALSE}
@@ -68,26 +86,8 @@ render("path/to/README.Rmd", envir = new.env())
 When this rmarkdown file is rendered, the following code is executed:
 
 ### Prepare workspace
-```{r prepAnalysis, eval = TRUE}
-instPckgs <- FALSE # change to "TRUE" to install all packages used in the analyses
+```{r prepAnalysis, eval = TRUE, results = 'hide'}
 unzipData <- FALSE # change to "TRUE" to unzip "data.zip" in the data directory
-
-if(instPckgs) {
-    install.packages(c("tidyverse",
-                       "stringr",
-                       "forcats",
-                       "MALDIquant",
-                       "MALDIquantForeign",
-                       "caret",
-                       "PRROC",
-                       "xgboost",
-                       "tictoc",
-                       "devtools",
-                       "openxlsx",
-                       "e1071",
-                       "knitr",
-                       "rmarkdown"))
-}
 
 if(unzipData) {
     unzip("data/data.zip", overwrite = T, exdir = "../data")
@@ -98,26 +98,41 @@ library(tictoc)
 
 tic()
 
-# Make results and temp directories:
+# Make results, temp and mdOutput directories:
 dir.create("temp")
 dir.create("results")
+dir.create("Rmd/mdOutput")
 
 # Set global parameters for analysis
 mzTol <- 1.5 # m/z tolerance for feature extraction in Da
 saveRDS(mzTol, "temp/mzTol.rds")
 ```
 
-### Run Analysis Scripts  
-```{r runAnalysis, eval = TRUE}
-render("Rmd/modelTraining.Rmd", envir = new.env()) # Trains xgboost models
-render("Rmd/simulateComplexSpectra.Rmd", envir = new.env()) # simulates polymicrobial spectra
-render("Rmd/mixtureAnalysis.Rmd", envir = new.env()) # Imports spectra from experimental two-species mixtures
-render("Rmd/evaluateModels.Rmd", envir = new.env()) # Calculate performance metrics and makes figures
-render("Rmd/makeMiscFigures.Rmd", envir = new.env()) # Creates additional figures
-render("Rmd/illustrations.Rmd", envir = new.env()) # Creates additional figures for illustrations
-render("Rmd/writeTables.Rmd", envir = new.env()) # Creates supplementarly Tables
+### Run Analysis Scripts
+The `runAnalysis()` function takes a list of `.Rmd` files and knits them into GitHub compatible markdown files. 
+```{r runAnalysisFun, eval = TRUE, results = 'hide'}
+runAnalysis <- function(rmd) {
+    lapply(rmd, 
+           render,
+           envir = new.env(),
+           output_dir = "Rmd/mdOutput")
+}
+
+files <- c("modelTraining", # Trains xgboost models
+           "simulateComplexSpectra", # simulates polymicrobial spectra
+           "mixtureAnalysis", # Imports spectra from experimental two-species
+           "evaluateModels", # Calculate performance metrics and makes figures
+           "makeMiscFigures", # Creates additional figures
+           "illustrations", # Creates additional figures for illustrations
+           "writeTables") # Creates supplementarly Tables
+
+files <- paste0("Rmd/", files, ".Rmd")
 ```
 
+Now run the analysis
+```{r runAnalysis, eval = TRUE, results = 'hide'}
+runAnalysis(files)
+```
 
 ## Session Info
 ```{r SessionInfo1, results = "hold", eval = TRUE}
