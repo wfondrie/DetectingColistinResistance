@@ -33,7 +33,7 @@ Order of analysis (see the Rmd subdirectory for details):
 
 ## Directory structure  
 To reproduce this analysis, the project directory must be structured as 
-follows:
+follows:  
 ```{}
 |- README.Rmd
 |- data
@@ -126,7 +126,7 @@ files <- c("modelTraining", # Trains xgboost models
 files <- paste0("Rmd/", files, ".Rmd")
 ```
 
-Now run the analysis
+Now run the analysis:  
 ```{r runAnalysis, eval = TRUE, results = 'hide'}
 runAnalysis(files)
 ```
