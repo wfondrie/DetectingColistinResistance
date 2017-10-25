@@ -691,7 +691,7 @@ ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm"
 ```
 
 ## Session Info  
-```{r sessionInfo}
+```{r sessionInfo, results='markup'}
 session_info()
 ```
 
