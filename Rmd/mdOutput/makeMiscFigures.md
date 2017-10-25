@@ -1,142 +1,187 @@
-Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids
+Make Miscellaneous Figures
 ================
-William E Fondrie,
-October 25, 2017
+William E Fondrie
 
--   [Introduction](#introduction)
--   [Directory structure](#directory-structure)
--   [Install necessary packages](#install-necessary-packages)
--   [Code to run the analysis](#code-to-run-the-analysis)
-    -   [Prepare workspace](#prepare-workspace)
-    -   [Run Analysis Scripts](#run-analysis-scripts)
+-   [Load Libraries and Prepare Workspace](#load-libraries-and-prepare-workspace)
+-   [Load Data](#load-data)
+-   [Plot of Resistance Peaks and Their Variation](#plot-of-resistance-peaks-and-their-variation)
+-   [Plot of the Isolate Dataset](#plot-of-the-isolate-dataset)
 -   [Session Info](#session-info)
 
-Introduction
-------------
-
-This repository contains the code and data required to reproduce the analysis presented in [*Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids*]().
-
-**WARNING:** When attempting to reproduce this analysis, it should be noted that `Rmd/simulateCompleSpectra.Rmd` requires approximately 50 Gb of memory to execute. Additionally, the entire analysis time may take a number of hours depending on the hardware.
-
-Order of analysis (see the Rmd subdirectory for details):
-1. [modelTraining.Rmd](Rmd/mdOutput/modelTraining.md)
-2. [simulateComplexSpectra.Rmd](Rmd/mdOutput/simulateComplexSpectra.md)
-3. [mixtureAnalysis.Rmd](Rmd/mdOutput/mixtureAnalysis.md)
-4. [evaluateModels.Rmd](Rmd/mdOutput/evaluateModels.md)
-5. [makeMiscFigures.Rmd](Rmd/mdOutput/makeMiscFigures.md)
-6. [illustrations.Rmd](Rmd/mdOutput/illustrations.md)
-7. [makeTables.Rmd](Rmd/mdOutput/makeTables.md)
-
-Directory structure
--------------------
-
-To reproduce this analysis, the project directory must be structured as follows:
-
-    |- README.Rmd
-    |- data
-    |  `- data.zip
-    |- R
-    |  |- createNewFeatureTbl.R
-    |  |- ggplotTheme.R
-    |  |- utilityFunctions.R
-    |  |- prepareData.R
-    |  |- extract.R
-    |  `- preProcessSpec.R
-    `- Rmd
-       |- evaluateModels.Rmd
-       |- illustrations.Rmd
-       |- makeMiscFigures.Rmd
-       |- mixtureAnalysis.Rmd
-       |- modelTraining.Rmd
-       |- simulateComplexSpectra.Rmd
-       `- writeTables.Rmd
-
-Install necessary packages
---------------------------
-
-This analysis uses a number of R packages. To ensure that all of them are installed on your machine, you can execute the following:
+Load Libraries and Prepare Workspace
+------------------------------------
 
 ``` r
-install.packages(c("tidyverse",
-                   "stringr",
-                   "forcats",
-                   "MALDIquant",
-                   "MALDIquantForeign",
-                   "caret",
-                   "PRROC",
-                   "xgboost",
-                   "tictoc",
-                   "devtools",
-                   "openxlsx",
-                   "e1071",
-                   "knitr",
-                   "rmarkdown"))
+# data manipulation
+suppressMessages(library(tidyverse, quietly = T))
+library(stringr, quietly = T)
+library(forcats, quietly = T)
+library(devtools, quietly = T)
+
+# handling MALDI spectra
+library(MALDIquant, quietly = T)
+library(MALDIquantForeign, quietly = T)
+
+# ggplot2 theme
+source("../R/ggplotTheme.R")
+theme_set(coolTheme)
+
+# import helper functions
+source("../R/preProcessSpec.R")
+source("../R/extract.R")
 ```
 
-Code to run the analysis
-------------------------
-
-With a correctly prepared directory, the entire analysis can be run with a single line of code. If it is your fist time running the analysis, you can unzip the `data/data.zip` into the `data` directory manually, or change `unzipData` to `TRUE` in the next section.
-
-To run the analysis:
+Load Data
+---------
 
 ``` r
-render("path/to/README.Rmd", envir = new.env())
+files <- list.files("../data/fullLib", 
+                    full.names = T, 
+                    pattern = "mzXML$",
+                    recursive = T)
+
+specInfo <- tibble(fname = files) %>%
+    mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
+           id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
+           species = str_match(type, "^[^ ]+ [^ ]+"),
+           Ab = ifelse(str_detect(type, "Acinetobacter baumannii - res"), "pos", "other"),
+           Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), "pos", "other"),
+           Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
+           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)))
+
+summary(specInfo)
+
+features <- readRDS("../temp/features.RDS")
+
+specList <- preProcessSpec(files, hws = 80) # Same preprocessing
+
+# rm files that contain multiple spectra
+multiSpecIdx <- map_lgl(specList, ~ metaData(.)$num > 1)
+specList <- specList[!multiSpecIdx]
+
+spec <- map_df(specList, extractSpectra)
+
+feattbl <- spec %>%
+  group_by(id) %>%
+  do(extractFeatures(., featureVec = unique(features$mz), tol = 1.5))
 ```
 
-When this rmarkdown file is rendered, the following code is executed:
-
-### Prepare workspace
+Plot of Resistance Peaks and Their Variation
+--------------------------------------------
 
 ``` r
-unzipData <- FALSE # change to "TRUE" to unzip "data.zip" in the data directory
+# Ab
+abFeat <- c("mz2036.4927")
+# Kp
+kpFeat <- c("mz1957.0536", "mz1973.1961")
 
-if(unzipData) {
-    unzip("data/data.zip", overwrite = T, exdir = "../data")
-}
-
-library(rmarkdown)
-
-# Make results, temp and mdOutput directories:
-dir.create("temp")
-dir.create("results")
-dir.create("Rmd/mdOutput")
-
-# Set global parameters for analysis
-mzTol <- 1.5 # m/z tolerance for feature extraction in Da
-saveRDS(mzTol, "temp/mzTol.rds")
+feattbl %>%
+  filter((str_detect(type, "Klebsiella pneumoniae") & feat %in% kpFeat) |
+           (str_detect(type, "Acinetobacter baumannii") & feat %in% abFeat)) %>%
+  mutate(res = ifelse(str_detect(type, "res"), "Colistin\nResistant", "Colistin\nSusceptible"),
+         species = ifelse(str_detect(type, "Acineto"), "A. baumannii", "K. pneumoniae"),
+         feat = str_replace(feat, "mz", "Feature m/z ")) %>%
+  ggplot(aes(y = relInt, x = res)) +
+  geom_jitter(alpha = 0.5, size = 1) +
+  stat_summary(fun.ymax = median, fun.ymin = median, 
+               fun.y = median, color = ggColors(3)[3], geom="crossbar") +
+  facet_wrap(~species + feat) +
+  ylab("Relative Intensity") +
+  theme(axis.title.x = element_blank())
 ```
 
-### Run Analysis Scripts
-
-The `runAnalysis()` function takes a list of `.Rmd` files and knits them into GitHub compatible markdown files.
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/peaks-1.png)
 
 ``` r
-runAnalysis <- function(rmd) {
-    lapply(rmd, 
-           render,
-           envir = new.env(),
-           output_dir = "Rmd/mdOutput")
-}
-
-files <- c("modelTraining", # Trains xgboost models
-           "simulateComplexSpectra", # simulates polymicrobial spectra
-           "mixtureAnalysis", # Imports spectra from experimental two-species
-           "evaluateModels", # Calculate performance metrics and makes figures
-           "makeMiscFigures", # Creates additional figures
-           "illustrations", # Creates additional figures for illustrations
-           "writeTables") # Creates supplementarly Tables
-
-files <- paste0("Rmd/", files, ".Rmd")
+ggsave("../results/resPeaks.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
 ```
 
-Now run the analysis
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/peaks-2.png)
+
+Plot of the Isolate Dataset
+---------------------------
 
 ``` r
-runAnalysis(files)
+specInfo %>% 
+  group_by(species) %>%
+  mutate(num = length(id)) %>%
+  ungroup() %>%
+  mutate(`Colistin\nResistant` = 
+           ifelse(Ab == "pos" | Kp == "pos", "Colistin-Resistant", NA),
+         `Colistin\nResistant` = 
+           ifelse(Ab == "neg" | Kp == "neg", "Colistin-Susceptible", `Colistin\nResistant`),
+         `Colistin\nResistant` = fct_rev(`Colistin\nResistant`),
+         species = fct_lump(species, 20),
+         species = fct_reorder(species, num)) %>%
+  ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
+  geom_bar(color = "black", width = 0.75) +
+  ylab("Number of Mass Spectra") +
+  scale_fill_discrete(name = NULL, breaks = c("Colistin-Resistant","Colistin-Susceptible")) +
+  coord_flip() +
+  coolTheme +
+  theme(legend.position = c(0.95, 0.25),
+        legend.justification = c(1,0),
+        axis.title.y = element_blank(),
+        legend.background = element_rect(color = "black"),
+        legend.key.size = unit(0.75, "lines"),
+        legend.title = element_blank())
 ```
 
-![](README_files/figure-markdown_github-ascii_identifiers/runAnalysis-1.png)
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/libraryDistro-1.png)
+
+``` r
+ggsave("../results/library.pdf", height = 125, width = 105, unit = "mm", useDingbats = F)
+
+
+specInfo %>% 
+  group_by(species) %>%
+  mutate(num = length(id)) %>%
+  ungroup() %>%
+  mutate(`Colistin\nResistant` = 
+           ifelse(Ab == "pos" | Kp == "pos", "Colistin-Resistant", NA),
+         `Colistin\nResistant` = 
+           ifelse(Ab == "neg" | Kp == "neg", "Colistin-Susceptible", `Colistin\nResistant`),
+         `Colistin\nResistant` = fct_rev(`Colistin\nResistant`),
+         species = fct_lump(species, 10),
+         species = fct_reorder(species, num)) %>%
+  ggplot(aes(x = species, fill = `Colistin\nResistant`)) +
+  geom_bar(color = "black", width = 0.75) +
+  ylab("Number of Mass Spectra") +
+  scale_fill_discrete(name = NULL, breaks = c("Colistin-Resistant","Colistin-Susceptible")) +
+  coord_flip() +
+  theme(legend.position = c(0.95, 0.25),
+        legend.justification = c(1,0),
+        axis.title.y = element_blank(),
+        legend.background = element_rect(color = "black"),
+        legend.text = element_text(size = 10),
+        legend.key.size = unit(0.75, "lines"),
+        legend.title = element_blank(),
+        axis.text = element_text(size = 10),
+        axis.title.x = element_text(size = 10))
+```
+
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/libraryDistro-2.png)![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/libraryDistro-3.png)
+
+``` r
+ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", useDingbats = F)
+
+summary(specInfo$species)
+```
+
+    ##                        V1     
+    ##  Acinetobacter baumannii:647  
+    ##  Klebsiella pneumoniae  :317  
+    ##  Pseudomonas aeruginosa :149  
+    ##  Serratia marcescens    :111  
+    ##  Staphylococcus aureus  :110  
+    ##  Enterobacter cloacae   :100  
+    ##  (Other)                :663
+
+``` r
+length(unique(specInfo$species))
+```
+
+    ## [1] 50
 
 Session Info
 ------------
@@ -249,6 +294,7 @@ session_info()
     ##  stringr            * 1.2.0    2017-02-18 CRAN (R 3.4.2)
     ##  survival             2.41-3   2017-04-04 CRAN (R 3.4.2)
     ##  tibble             * 1.3.4    2017-08-22 CRAN (R 3.4.2)
+    ##  tictoc             * 1.0      2014-06-17 CRAN (R 3.4.1)
     ##  tidyr              * 0.7.2    2017-10-16 CRAN (R 3.4.2)
     ##  tidyselect           0.2.2    2017-10-10 CRAN (R 3.4.2)
     ##  tidyverse          * 1.1.1    2017-01-27 CRAN (R 3.4.2)

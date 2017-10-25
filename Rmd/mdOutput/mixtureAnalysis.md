@@ -1,142 +1,111 @@
-Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids
+Analysis of Experimental Two-Species UTI Mixtures
 ================
-William E Fondrie,
-October 25, 2017
+William E Fondrie
 
--   [Introduction](#introduction)
--   [Directory structure](#directory-structure)
--   [Install necessary packages](#install-necessary-packages)
--   [Code to run the analysis](#code-to-run-the-analysis)
-    -   [Prepare workspace](#prepare-workspace)
-    -   [Run Analysis Scripts](#run-analysis-scripts)
+-   [Load Libraries & Prepare Workspace](#load-libraries-prepare-workspace)
+-   [Import and Process Spectra](#import-and-process-spectra)
+-   [Plot Spectra](#plot-spectra)
 -   [Session Info](#session-info)
 
-Introduction
-------------
+Load Libraries & Prepare Workspace
+----------------------------------
 
-This repository contains the code and data required to reproduce the analysis presented in [*Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids*]().
+``` r
+# data manipulation
+suppressMessages(library(tidyverse, quietly = T))
+library(stringr, quietly = T)
+library(forcats, quietly = T)
+library(devtools, quietly = T)
 
-**WARNING:** When attempting to reproduce this analysis, it should be noted that `Rmd/simulateCompleSpectra.Rmd` requires approximately 50 Gb of memory to execute. Additionally, the entire analysis time may take a number of hours depending on the hardware.
+# handling MALDI spectra
+library(MALDIquant, quietly = T)
+library(MALDIquantForeign, quietly = T)
 
-Order of analysis (see the Rmd subdirectory for details):
-1. [modelTraining.Rmd](Rmd/mdOutput/modelTraining.md)
-2. [simulateComplexSpectra.Rmd](Rmd/mdOutput/simulateComplexSpectra.md)
-3. [mixtureAnalysis.Rmd](Rmd/mdOutput/mixtureAnalysis.md)
-4. [evaluateModels.Rmd](Rmd/mdOutput/evaluateModels.md)
-5. [makeMiscFigures.Rmd](Rmd/mdOutput/makeMiscFigures.md)
-6. [illustrations.Rmd](Rmd/mdOutput/illustrations.md)
-7. [makeTables.Rmd](Rmd/mdOutput/makeTables.md)
+# ggplot2 theme
+source("../R/ggplotTheme.R")
+theme_set(coolTheme)
 
-Directory structure
--------------------
+# import helper functions
+source("../R/preProcessSpec.R")
+source("../R/extract.R")
+source("../R/createNewFeatureTbl.R")
 
-To reproduce this analysis, the project directory must be structured as follows:
+featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
+```
 
-    |- README.Rmd
-    |- data
-    |  `- data.zip
-    |- R
-    |  |- createNewFeatureTbl.R
-    |  |- ggplotTheme.R
-    |  |- utilityFunctions.R
-    |  |- prepareData.R
-    |  |- extract.R
-    |  `- preProcessSpec.R
-    `- Rmd
-       |- evaluateModels.Rmd
-       |- illustrations.Rmd
-       |- makeMiscFigures.Rmd
-       |- mixtureAnalysis.Rmd
-       |- modelTraining.Rmd
-       |- simulateComplexSpectra.Rmd
-       `- writeTables.Rmd
-
-Install necessary packages
+Import and Process Spectra
 --------------------------
 
-This analysis uses a number of R packages. To ensure that all of them are installed on your machine, you can execute the following:
-
 ``` r
-install.packages(c("tidyverse",
-                   "stringr",
-                   "forcats",
-                   "MALDIquant",
-                   "MALDIquantForeign",
-                   "caret",
-                   "PRROC",
-                   "xgboost",
-                   "tictoc",
-                   "devtools",
-                   "openxlsx",
-                   "e1071",
-                   "knitr",
-                   "rmarkdown"))
+files <- list.files("../data/twoSpeciesMixtures", 
+                    full.names = T, 
+                    pattern = "mzXML$",
+                    recursive = T)
+
+fctOrder <- c("neg", "other", "pos")
+
+twoSpeciesSpecInfo <- tibble(fname = files) %>%
+    mutate(type = "twoSpeciesMixtures",
+           id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
+           Ab = ifelse(str_detect(id, "Ab_res"), "pos", "other"),
+           Kp = ifelse(str_detect(id, "Kp_res"), "pos", "other"),
+           Ab = as.factor(ifelse(str_detect(id, "Ab_sus"), "neg", Ab)),
+           Kp = as.factor(ifelse(str_detect(id, "Kp_sus"), "neg", Kp)),
+           percentEc = as.numeric(str_match(id, " (.+)Ec")[ , 2])) %>%
+    mutate(Ab = fct_relevel(Ab, fctOrder),
+           Kp = fct_relevel(Kp, fctOrder))
+
+saveRDS(twoSpeciesSpecInfo, file = "../temp/twoSpeciesSpecInfo.rds")
+
+
+features <- readRDS("../temp/features.RDS")
+
+specList <- preProcessSpec(files, hws = 80) # Same preprocessing
+
+spec <- map_df(specList, extractSpectra)
+
+trainIdx <- readRDS("../temp/trainIdx.rds")
+
+twoSpeciesDatList <- map(trainIdx,createNewFeatureTbl, 
+                         specDf = spec,
+                         summaryDat = twoSpeciesSpecInfo,
+                         mzTol = featTol,
+                         fileName = "twoSpeciesMixtures")
+
+saveRDS(twoSpeciesDatList, file = "../temp/twoSpeciesDatList.rds")
 ```
 
-Code to run the analysis
-------------------------
-
-With a correctly prepared directory, the entire analysis can be run with a single line of code. If it is your fist time running the analysis, you can unzip the `data/data.zip` into the `data` directory manually, or change `unzipData` to `TRUE` in the next section.
-
-To run the analysis:
+Plot Spectra
+------------
 
 ``` r
-render("path/to/README.Rmd", envir = new.env())
+exampleSpec <- twoSpeciesSpecInfo %>%
+    mutate(percentTarget = 100 - percentEc,
+           percentLabs = as.factor(paste0(percentTarget, "%")),
+           percentLabs = fct_reorder(percentLabs, percentTarget),
+           targetOrg = NA,
+           targetOrg = ifelse(Ab != "other", "A. baumannii", targetOrg),
+           targetOrg = ifelse(Kp != "other", "K. pneumoniae", targetOrg)) %>%
+    filter(!is.na(targetOrg)) %>%
+    group_by(targetOrg, percentTarget) %>%
+    do(.[1, ])
+
+
+
+exampleSpec %>%
+    left_join(spec) %>%
+    ggplot(aes(x = mz, y = relInt*100)) + 
+    geom_line() +
+    facet_grid(percentLabs ~ targetOrg) +
+    ylab("Relative Intensity") +
+    xlab(expression(italic("m/z")))
 ```
 
-When this rmarkdown file is rendered, the following code is executed:
-
-### Prepare workspace
+![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\mixtureAnalysis_files/figure-markdown_github-ascii_identifiers/plotSpec-1.png)
 
 ``` r
-unzipData <- FALSE # change to "TRUE" to unzip "data.zip" in the data directory
-
-if(unzipData) {
-    unzip("data/data.zip", overwrite = T, exdir = "../data")
-}
-
-library(rmarkdown)
-
-# Make results, temp and mdOutput directories:
-dir.create("temp")
-dir.create("results")
-dir.create("Rmd/mdOutput")
-
-# Set global parameters for analysis
-mzTol <- 1.5 # m/z tolerance for feature extraction in Da
-saveRDS(mzTol, "temp/mzTol.rds")
+ggsave("../results/twoSpeciesMixtureSpectra.pdf", width = 200, height = 120, unit = "mm", useDingbats = F)
 ```
-
-### Run Analysis Scripts
-
-The `runAnalysis()` function takes a list of `.Rmd` files and knits them into GitHub compatible markdown files.
-
-``` r
-runAnalysis <- function(rmd) {
-    lapply(rmd, 
-           render,
-           envir = new.env(),
-           output_dir = "Rmd/mdOutput")
-}
-
-files <- c("modelTraining", # Trains xgboost models
-           "simulateComplexSpectra", # simulates polymicrobial spectra
-           "mixtureAnalysis", # Imports spectra from experimental two-species
-           "evaluateModels", # Calculate performance metrics and makes figures
-           "makeMiscFigures", # Creates additional figures
-           "illustrations", # Creates additional figures for illustrations
-           "writeTables") # Creates supplementarly Tables
-
-files <- paste0("Rmd/", files, ".Rmd")
-```
-
-Now run the analysis
-
-``` r
-runAnalysis(files)
-```
-
-![](README_files/figure-markdown_github-ascii_identifiers/runAnalysis-1.png)
 
 Session Info
 ------------
@@ -178,7 +147,6 @@ session_info()
     ##  dimRed               0.1.0    2017-05-04 CRAN (R 3.4.2)
     ##  dplyr              * 0.7.4    2017-09-28 CRAN (R 3.4.2)
     ##  DRR                  0.0.2    2016-09-15 CRAN (R 3.4.2)
-    ##  e1071                1.6-8    2017-02-02 CRAN (R 3.4.2)
     ##  evaluate             0.10.1   2017-06-24 CRAN (R 3.4.2)
     ##  forcats            * 0.2.0    2017-01-23 CRAN (R 3.4.2)
     ##  foreach              1.4.3    2015-10-13 CRAN (R 3.4.2)
@@ -249,6 +217,7 @@ session_info()
     ##  stringr            * 1.2.0    2017-02-18 CRAN (R 3.4.2)
     ##  survival             2.41-3   2017-04-04 CRAN (R 3.4.2)
     ##  tibble             * 1.3.4    2017-08-22 CRAN (R 3.4.2)
+    ##  tictoc             * 1.0      2014-06-17 CRAN (R 3.4.1)
     ##  tidyr              * 0.7.2    2017-10-16 CRAN (R 3.4.2)
     ##  tidyselect           0.2.2    2017-10-10 CRAN (R 3.4.2)
     ##  tidyverse          * 1.1.1    2017-01-27 CRAN (R 3.4.2)

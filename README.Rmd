@@ -94,9 +94,6 @@ if(unzipData) {
 }
 
 library(rmarkdown)
-library(tictoc)
-
-tic()
 
 # Make results, temp and mdOutput directories:
 dir.create("temp")
@@ -136,10 +133,6 @@ runAnalysis(files)
 
 ## Session Info
 ```{r SessionInfo1, results = "hold", eval = TRUE}
-times <- toc()
-
-cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))
-
 session_info()
 ```
 
