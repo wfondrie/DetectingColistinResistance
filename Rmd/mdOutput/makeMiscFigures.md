@@ -26,6 +26,8 @@ library(MALDIquantForeign, quietly = T)
 source("../R/ggplotTheme.R")
 theme_set(coolTheme)
 
+set.seed(09813734)
+
 # import helper functions
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
