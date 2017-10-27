@@ -32,6 +32,8 @@ source("../R/preProcessSpec.R")
 source("../R/extract.R")
 source("../R/createNewFeatureTbl.R")
 
+set.seed(585746)
+
 featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
 ```
 ## Import and Process Spectra  
@@ -99,7 +101,8 @@ exampleSpec %>%
     facet_grid(percentLabs ~ res) +
     ylab("Relative Intensity") +
     xlab(expression(italic("m/z"))) +
-    ggtitle(expression(italic("A. baumannii")))
+    ggtitle(expression(italic("A. baumannii"))) +
+    coolTheme
 
 ggsave("../results/AbTwoSpeciesMixtureSpectra.pdf", width = 200, 
        height = 120, unit = "mm", useDingbats = F)
@@ -113,7 +116,8 @@ exampleSpec %>%
     facet_grid(percentLabs ~ res) +
     ylab("Relative Intensity") +
     xlab(expression(italic("m/z"))) +
-    ggtitle(expression(italic("K. pneumoniae")))
+    ggtitle(expression(italic("K. pneumoniae"))) +
+    coolTheme
 
 ggsave("../results/KpTwoSpeciesMixtureSpectra.pdf", width = 200, 
        height = 120, unit = "mm", useDingbats = F)

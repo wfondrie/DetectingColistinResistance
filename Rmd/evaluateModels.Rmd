@@ -718,7 +718,7 @@ twoRes %>%
     facet_wrap(~orgResults, ncol = 2) +
     scale_fill_discrete(breaks = c("resistant", "susceptible")) +
     xlab("Percent Target Species by Volume") +
-    ylab("Colistin Resistance log[Score]") +
+    ylab("Colistin Resistance log(Score)") +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
           legend.position = "bottom") #+
