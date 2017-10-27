@@ -46,7 +46,7 @@ featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
 ```
 
 
-# Partition Data  
+## Partition Data  
 ```{r getFileInfo}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
