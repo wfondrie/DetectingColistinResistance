@@ -223,7 +223,7 @@ ggsave("../results/KpRocCurve.pdf", width = 70, height = 50, units = "mm", useDi
 ```
 
 ## New Confusion Matrices
-```{r misclassified}
+```{r confusionMats, results='markup'}
 pickThold <- function(curve, minSens) {
     dat <- as.data.frame(curve$curve)
     dat <- dat[dat[ , 2] >= minSens, ]
@@ -527,24 +527,37 @@ ggsave("../results/mixedCurvesAUCPlot.pdf", width = 70, height = 80, units = "mm
 ```
 
 ```{r otherSimStats, results = 'markup'}
+mixedThold <- mixedCurveDat %>%
+    filter(PrOrRoc == "ROC",
+           n == "Overall") %>%
+    group_by(orgResults, type) %>%
+    summarise(threshold = max(Threshold[Prec_Sens >= 0.97])) %>%
+    mutate(type2 = tolower(str_replace(type, "Colistin-", "")),
+           species = str_replace(orgResults, "\\. ", ""),
+           species = str_match(species, "^.."),
+           type = paste0(species, "_", type2)) %>%
+    select(-species, -type2)
+
+mixedThold # 97% Sensitivity Thresholds for Simulated Mixtures
+
 mixedAbRes <- mixedAbRes %>%
-    mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Ab_resistant"],
+    mutate(posPred = ifelse(pos >= mixedThold$threshold[mixedThold$type == "Ab_resistant"],
                             "pos", "neg"),
            posTruth = ifelse(truth == "pos", "pos", "neg"),
-           specPred = ifelse(speciesVsOther >= thold$threshold[thold$type == "Ab_species"],
+           specPred = ifelse(speciesVsOther >= mixedThold$threshold[mixedThold$type == "Ab_species"],
                              "Ab", "other"),
            specTruth = ifelse(truth != "other", "Ab", "other"))
 
 
 mixedKpRes <- mixedKpRes %>%
-    mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Kp_resistant"],
+    mutate(posPred = ifelse(pos >= mixedThold$threshold[mixedThold$type == "Kp_resistant"],
                             "pos", "neg"),
            posTruth = ifelse(truth == "pos", "pos", "neg"),
-           specPred = ifelse(speciesVsOther >= thold$threshold[thold$type == "Kp_species"],
+           specPred = ifelse(speciesVsOther >= mixedThold$threshold[mixedThold$type == "Kp_species"],
                              "Kp", "other"),
            specTruth = ifelse(truth != "other", "Kp", "other"))
 
-
+# Function to calculate Species Stats
 specStats <- function(resDf, posClass) {
     d1 <- map_df(1:5, function(n) {
         cm <- confusionMatrix(data = resDf$specPred[resDf$n == n], 
@@ -560,17 +573,20 @@ specStats <- function(resDf, posClass) {
     
     ret <- rbind(data.frame(as.list(c(cm2$overall, cm2$byClass))), d1)
     ret$n <- c("Overall", 1, 2, 3, 4, 5)
+    ret$orgResults <- resDf$orgResults[1]
+    
+    ret <- select(ret, orgResults, n, Accuracy,
+                  Sensitivity, Specificity, Precision)
     
     return(ret)
 }
 
-# Ab Species
-specStats(mixedAbRes, "Ab")
+# Species Stats
+mixedSpecStats <- specStats(mixedAbRes, "Ab") %>%
+    full_join(specStats(mixedKpRes, "Kp"))
+mixedSpecStats
 
-# Kp Species
-specStats(mixedKpRes, "Kp")
-
-
+# Function to calculate Resistance Stats
 resStats <- function(resDf, posClass = "pos") {
     d1 <- map_df(1:5, function(n) {
         cm <- confusionMatrix(data = resDf$posPred[resDf$n == n], 
@@ -586,17 +602,48 @@ resStats <- function(resDf, posClass = "pos") {
     
     ret <- rbind(data.frame(as.list(c(cm2$overall, cm2$byClass))), d1)
     ret$n <- c("Overall", 1, 2, 3, 4, 5)
+    ret$orgResults <- resDf$orgResults[1]
+    
+    ret <- select(ret, orgResults, n, Accuracy,
+                  Sensitivity, Specificity, Precision)
     
     return(ret)
 }
 
-# Ab Species
-resStats(mixedAbRes)
+# Resistance Stats
+mixedResStats <- resStats(mixedAbRes) %>%
+    full_join(resStats(mixedKpRes))
 
-# Kp Species
-resStats(mixedKpRes)
+mixedResStats
 
 ```
+
+### Plot statistics from simulated mixtures
+```{r mixedStatisticsPlots}
+mixedSpecStats %>%
+    gather(statistic, value, -orgResults, -n) %>%
+    ggplot(aes(x = n, y = value)) +
+    geom_col(position = "dodge") +
+    facet_grid(orgResults ~ statistic) +
+    ylab("Value") +
+    xlab("Number of Species in Mixture") +
+    ggtitle("Species-Level Detection")
+
+ggsave("../results/simSpecStats.pdf", width = 210, height = 80, units = "mm", useDingbats = F)
+
+mixedResStats %>%
+    gather(statistic, value, -orgResults, -n) %>%
+    ggplot(aes(x = n, y = value)) +
+    geom_col(position = "dodge") +
+    facet_grid(orgResults ~ statistic) +
+    ylab("Value") +
+    xlab("Number of Species in Mixture") +
+    ggtitle("Colistin Resistance Detection")
+
+ggsave("../results/simResStats.pdf", width = 210, height = 80, units = "mm", useDingbats = F)
+```
+
+
 
 ## Two-Species UTI Mixtures
 ```{r twoSpecies}
@@ -640,49 +687,42 @@ saveRDS(twoKpRes, file = "../temp/twoKpRes.rds")
 
 ### Plot scores vs cutoff
 ```{r twoSpecScores}
-tholdSpecies <- thold %>%
-    filter(str_detect(type, "species")) %>%
-    mutate(orgResults = ifelse(str_detect(type, "Ab"),
-                               "A. baumannii",
-                               "K. pneumoniae"))
+tholdSpecies <- mixedThold %>%
+    filter(str_detect(type, "species"))
 
 twoRes %>%
-    ggplot(aes(x = as.factor(percentTarget), y = speciesVsOther, fill = Colistin)) +
-    geom_hline(data = tholdSpecies, aes(yintercept = threshold), 
-               size = 1, linetype = "dashed") +
+    ggplot(aes(x = as.factor(percentTarget), y = log10(speciesVsOther), fill = Colistin)) +
+    #geom_hline(data = tholdSpecies, aes(yintercept = threshold), 
+    #           size = 1, linetype = "dashed") +
     geom_jitter(width = 0.25, shape = 21) +
     facet_wrap(~orgResults, ncol = 2) +
     scale_fill_discrete(breaks = c("resistant", "susceptible")) +
     xlab("Percent Target Species by Volume") +
-    ylab("Species Score") +
+    ylab("Species log(Score)") +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
-          legend.position = "bottom") +
-    ylim(c(0, 1))
+          legend.position = "bottom") #+
+    #ylim(c(0, 1))
 
 ggsave("../results/twoSpeciesSpecRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)
 
 
-tholdRes <- thold %>%
-    filter(str_detect(type, "res")) %>%
-    mutate(orgResults = ifelse(str_detect(type, "Ab"),
-                               "A. baumannii",
-                               "K. pneumoniae"))
-
+tholdRes <- mixedThold %>%
+    filter(str_detect(type, "res"))
 
 twoRes %>%
-    ggplot(aes(x = as.factor(percentTarget), y = pos, fill = Colistin)) +
-    geom_hline(data = tholdRes, aes(yintercept = threshold), 
-               size = 1, linetype = "dashed") +
+    ggplot(aes(x = as.factor(percentTarget), y = log10(pos), fill = Colistin)) +
+    #geom_hline(data = tholdRes, aes(yintercept = log10(threshold)), 
+    #           size = 1, linetype = "dashed") +
     geom_jitter(width = 0.25, shape = 21) +
     facet_wrap(~orgResults, ncol = 2) +
     scale_fill_discrete(breaks = c("resistant", "susceptible")) +
     xlab("Percent Target Species by Volume") +
-    ylab("Colistin-Resistance Score") +
+    ylab("Colistin Resistance log[Score]") +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
-          legend.position = "bottom") +
-    ylim(c(0, 1))
+          legend.position = "bottom") #+
+    #ylim(c(0, 1))
 
 ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)
     
