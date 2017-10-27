@@ -4,15 +4,15 @@ Training XGBoost Models
 -   [Introduction](#introduction)
 -   [Load Libraries & Prepare Workspace](#load-libraries-prepare-workspace)
 -   [Partition Data](#partition-data)
-    -   [Select Features From Training Data](#select-features-from-training-data)
-    -   [Extract features from Spectra](#extract-features-from-spectra)
-    -   [Train the XGBoost Tree Models](#train-the-xgboost-tree-models)
-        -   [Prepare the Data for Model Training](#prepare-the-data-for-model-training)
-        -   [Tune Hyperparameter by Grid Search](#tune-hyperparameter-by-grid-search)
-        -   [Refine Models](#refine-models)
-        -   [Final Model](#final-model)
-    -   [Prepare Test Set](#prepare-test-set)
-    -   [Session Information](#session-information)
+-   [Select Features From Training Data](#select-features-from-training-data)
+-   [Extract features from Spectra](#extract-features-from-spectra)
+-   [Train the XGBoost Tree Models](#train-the-xgboost-tree-models)
+    -   [Prepare the Data for Model Training](#prepare-the-data-for-model-training)
+    -   [Tune Hyperparameter by Grid Search](#tune-hyperparameter-by-grid-search)
+    -   [Refine Models](#refine-models)
+    -   [Final Model](#final-model)
+-   [Prepare Test Set](#prepare-test-set)
+-   [Session Information](#session-information)
 
 Introduction
 ------------
@@ -54,7 +54,7 @@ featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
 ```
 
 Partition Data
-==============
+--------------
 
 ``` r
 files <- list.files("../data/fullLib", 

@@ -14,6 +14,7 @@ William E Fondrie
     -   [Klebsiella pneumoniae](#klebsiella-pneumoniae-1)
     -   [Plot PR and ROC curves for Simulated Mixtures by Number of Spectra in Mixture](#plot-pr-and-roc-curves-for-simulated-mixtures-by-number-of-spectra-in-mixture)
     -   [Plot the AUC of PR and ROC Curves With Increasing Matrix Complexity](#plot-the-auc-of-pr-and-roc-curves-with-increasing-matrix-complexity)
+    -   [Plot statistics from simulated mixtures](#plot-statistics-from-simulated-mixtures)
 -   [Two-Species UTI Mixtures](#two-species-uti-mixtures)
     -   [Plot scores vs cutoff](#plot-scores-vs-cutoff)
 -   [Session Info](#session-info)
@@ -156,6 +157,9 @@ ggsave("../results/AbPrCurve.pdf", width = 70, height = 50, units = "mm", useDin
 
 # ROC
 rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
+```
+
+``` r
 rocAb <- as.tibble(rbind(abPosROC$curve, 
                          abSpeciesROC$curve))
 names(rocAb) <- rocnames
@@ -283,12 +287,75 @@ abRes2 <- abRes %>%
 # Ab Species
 confusionMatrix(data = abRes2$specPred, reference = abRes2$specTruth, 
                 positive = "Ab", mode = "everything")
+```
 
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction  Ab other
+    ##      Ab    252     0
+    ##      other   6   580
+    ##                                           
+    ##                Accuracy : 0.9928          
+    ##                  95% CI : (0.9845, 0.9974)
+    ##     No Information Rate : 0.6921          
+    ##     P-Value [Acc > NIR] : < 2e-16         
+    ##                                           
+    ##                   Kappa : 0.9831          
+    ##  Mcnemar's Test P-Value : 0.04123         
+    ##                                           
+    ##             Sensitivity : 0.9767          
+    ##             Specificity : 1.0000          
+    ##          Pos Pred Value : 1.0000          
+    ##          Neg Pred Value : 0.9898          
+    ##               Precision : 1.0000          
+    ##                  Recall : 0.9767          
+    ##                      F1 : 0.9882          
+    ##              Prevalence : 0.3079          
+    ##          Detection Rate : 0.3007          
+    ##    Detection Prevalence : 0.3007          
+    ##       Balanced Accuracy : 0.9884          
+    ##                                           
+    ##        'Positive' Class : Ab              
+    ## 
+
+``` r
 # Colistin-Resistant Ab
 confusionMatrix(data = abRes2$posPred, reference = abRes2$posTruth, 
                 positive = "pos", mode = "everything")
+```
 
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction neg pos
+    ##        neg 778   1
+    ##        pos  24  35
+    ##                                           
+    ##                Accuracy : 0.9702          
+    ##                  95% CI : (0.9563, 0.9806)
+    ##     No Information Rate : 0.957           
+    ##     P-Value [Acc > NIR] : 0.03169         
+    ##                                           
+    ##                   Kappa : 0.722           
+    ##  Mcnemar's Test P-Value : 1.083e-05       
+    ##                                           
+    ##             Sensitivity : 0.97222         
+    ##             Specificity : 0.97007         
+    ##          Pos Pred Value : 0.59322         
+    ##          Neg Pred Value : 0.99872         
+    ##               Precision : 0.59322         
+    ##                  Recall : 0.97222         
+    ##                      F1 : 0.73684         
+    ##              Prevalence : 0.04296         
+    ##          Detection Rate : 0.04177         
+    ##    Detection Prevalence : 0.07041         
+    ##       Balanced Accuracy : 0.97115         
+    ##                                           
+    ##        'Positive' Class : pos             
+    ## 
 
+``` r
 kpRes2 <- kpRes %>%
     mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Kp_resistant"],
                             "pos", "neg"),
@@ -300,11 +367,73 @@ kpRes2 <- kpRes %>%
 # Kp Species
 confusionMatrix(data = kpRes2$specPred, reference = kpRes2$specTruth, 
                 positive = "Kp", mode = "everything")
+```
 
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction  Kp other
+    ##      Kp    123     7
+    ##      other   3   704
+    ##                                           
+    ##                Accuracy : 0.9881          
+    ##                  95% CI : (0.9781, 0.9943)
+    ##     No Information Rate : 0.8495          
+    ##     P-Value [Acc > NIR] : <2e-16          
+    ##                                           
+    ##                   Kappa : 0.9539          
+    ##  Mcnemar's Test P-Value : 0.3428          
+    ##                                           
+    ##             Sensitivity : 0.9762          
+    ##             Specificity : 0.9902          
+    ##          Pos Pred Value : 0.9462          
+    ##          Neg Pred Value : 0.9958          
+    ##               Precision : 0.9462          
+    ##                  Recall : 0.9762          
+    ##                      F1 : 0.9609          
+    ##              Prevalence : 0.1505          
+    ##          Detection Rate : 0.1470          
+    ##    Detection Prevalence : 0.1553          
+    ##       Balanced Accuracy : 0.9832          
+    ##                                           
+    ##        'Positive' Class : Kp              
+    ## 
+
+``` r
 # Colistin-Resistant Kp
 confusionMatrix(data = kpRes2$posPred, reference = kpRes2$posTruth, 
                 positive = "pos", mode = "everything")
 ```
+
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction neg pos
+    ##        neg 651   2
+    ##        pos  99  85
+    ##                                           
+    ##                Accuracy : 0.8793          
+    ##                  95% CI : (0.8553, 0.9006)
+    ##     No Information Rate : 0.8961          
+    ##     P-Value [Acc > NIR] : 0.9473          
+    ##                                           
+    ##                   Kappa : 0.5661          
+    ##  Mcnemar's Test P-Value : <2e-16          
+    ##                                           
+    ##             Sensitivity : 0.9770          
+    ##             Specificity : 0.8680          
+    ##          Pos Pred Value : 0.4620          
+    ##          Neg Pred Value : 0.9969          
+    ##               Precision : 0.4620          
+    ##                  Recall : 0.9770          
+    ##                      F1 : 0.6273          
+    ##              Prevalence : 0.1039          
+    ##          Detection Rate : 0.1016          
+    ##    Detection Prevalence : 0.2198          
+    ##       Balanced Accuracy : 0.9225          
+    ##                                           
+    ##        'Positive' Class : pos             
+    ## 
 
 Variable Importance
 -------------------
@@ -578,24 +707,48 @@ ggsave("../results/mixedCurvesAUCPlot.pdf", width = 70, height = 80, units = "mm
 ```
 
 ``` r
+mixedThold <- mixedCurveDat %>%
+    filter(PrOrRoc == "ROC",
+           n == "Overall") %>%
+    group_by(orgResults, type) %>%
+    summarise(threshold = max(Threshold[Prec_Sens >= 0.97])) %>%
+    mutate(type2 = tolower(str_replace(type, "Colistin-", "")),
+           species = str_replace(orgResults, "\\. ", ""),
+           species = str_match(species, "^.."),
+           type = paste0(species, "_", type2)) %>%
+    select(-species, -type2)
+
+mixedThold # 97% Sensitivity Thresholds for Simulated Mixtures
+```
+
+    ## # A tibble: 4 x 3
+    ## # Groups:   orgResults [2]
+    ##      orgResults         type    threshold
+    ##           <chr>        <chr>        <dbl>
+    ## 1  A. baumannii Ab_resistant 0.0004897423
+    ## 2  A. baumannii   Ab_species 0.0016128461
+    ## 3 K. pneumoniae Kp_resistant 0.0098284408
+    ## 4 K. pneumoniae   Kp_species 0.0143815272
+
+``` r
 mixedAbRes <- mixedAbRes %>%
-    mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Ab_resistant"],
+    mutate(posPred = ifelse(pos >= mixedThold$threshold[mixedThold$type == "Ab_resistant"],
                             "pos", "neg"),
            posTruth = ifelse(truth == "pos", "pos", "neg"),
-           specPred = ifelse(speciesVsOther >= thold$threshold[thold$type == "Ab_species"],
+           specPred = ifelse(speciesVsOther >= mixedThold$threshold[mixedThold$type == "Ab_species"],
                              "Ab", "other"),
            specTruth = ifelse(truth != "other", "Ab", "other"))
 
 
 mixedKpRes <- mixedKpRes %>%
-    mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Kp_resistant"],
+    mutate(posPred = ifelse(pos >= mixedThold$threshold[mixedThold$type == "Kp_resistant"],
                             "pos", "neg"),
            posTruth = ifelse(truth == "pos", "pos", "neg"),
-           specPred = ifelse(speciesVsOther >= thold$threshold[thold$type == "Kp_species"],
+           specPred = ifelse(speciesVsOther >= mixedThold$threshold[mixedThold$type == "Kp_species"],
                              "Kp", "other"),
            specTruth = ifelse(truth != "other", "Kp", "other"))
 
-
+# Function to calculate Species Stats
 specStats <- function(resDf, posClass) {
     d1 <- map_df(1:5, function(n) {
         cm <- confusionMatrix(data = resDf$specPred[resDf$n == n], 
@@ -611,78 +764,36 @@ specStats <- function(resDf, posClass) {
     
     ret <- rbind(data.frame(as.list(c(cm2$overall, cm2$byClass))), d1)
     ret$n <- c("Overall", 1, 2, 3, 4, 5)
+    ret$orgResults <- resDf$orgResults[1]
+    
+    ret <- select(ret, orgResults, n, Accuracy,
+                  Sensitivity, Specificity, Precision)
     
     return(ret)
 }
 
-# Ab Species
-specStats(mixedAbRes, "Ab")
+# Species Stats
+mixedSpecStats <- specStats(mixedAbRes, "Ab") %>%
+    full_join(specStats(mixedKpRes, "Kp"))
+mixedSpecStats
 ```
 
-    ##   Accuracy     Kappa AccuracyLower AccuracyUpper AccuracyNull
-    ## 1   0.8832 0.6593830     0.8739730     0.8919769       0.7282
-    ## 2   0.9980 0.9949956     0.9927942     0.9997577       0.7230
-    ## 3   0.9140 0.7566332     0.8948797     0.9306375       0.7320
-    ## 4   0.8340 0.5335192     0.8094632     0.8565513       0.6980
-    ## 5   0.8270 0.4501303     0.8021034     0.8499536       0.7300
-    ## 6   0.8430 0.4527557     0.8189474     0.8650123       0.7580
-    ##   AccuracyPValue McnemarPValue Sensitivity Specificity Pos.Pred.Value
-    ## 1  3.560493e-158 7.411441e-127   0.5717439   0.9994507      0.9974326
-    ## 2  1.013410e-136  4.795001e-01   0.9927798   1.0000000      1.0000000
-    ## 3   1.235919e-47  3.550956e-19   0.6828358   0.9986339      0.9945652
-    ## 4   2.891881e-23  1.508154e-37   0.4503311   1.0000000      1.0000000
-    ## 5   3.268622e-13  4.461673e-39   0.3592593   1.0000000      1.0000000
-    ## 6   3.195514e-11  1.018261e-34   0.3553719   0.9986807      0.9885057
-    ##   Neg.Pred.Value Precision    Recall        F1 Prevalence Detection.Rate
-    ## 1      0.8621180 0.9974326 0.5717439 0.7268475     0.2718         0.1554
-    ## 2      0.9972414 1.0000000 0.9927798 0.9963768     0.2770         0.2750
-    ## 3      0.8958333 0.9945652 0.6828358 0.8097345     0.2680         0.1830
-    ## 4      0.8078704 1.0000000 0.4503311 0.6210046     0.3020         0.1360
-    ## 5      0.8084164 1.0000000 0.3592593 0.5286104     0.2700         0.0970
-    ## 6      0.8291347 0.9885057 0.3553719 0.5227964     0.2420         0.0860
-    ##   Detection.Prevalence Balanced.Accuracy       n
-    ## 1               0.1558         0.7855973 Overall
-    ## 2               0.2750         0.9963899       1
-    ## 3               0.1840         0.8407349       2
-    ## 4               0.1360         0.7251656       3
-    ## 5               0.0970         0.6796296       4
-    ## 6               0.0870         0.6770263       5
+    ##       orgResults       n  Accuracy Sensitivity Specificity Precision
+    ## 1   A. baumannii Overall 0.7198000   0.9705666   0.6262016 0.4921642
+    ## 2   A. baumannii       1 0.6800000   1.0000000   0.5573997 0.4639866
+    ## 3   A. baumannii       2 0.6580000   0.9925373   0.5355191 0.4389439
+    ## 4   A. baumannii       3 0.7350000   0.9701987   0.6332378 0.5336976
+    ## 5   A. baumannii       4 0.7480000   0.9444444   0.6753425 0.5182927
+    ## 6   A. baumannii       5 0.7780000   0.9421488   0.7255937 0.5229358
+    ## 7  K. pneumoniae Overall 0.8956133   0.9700000   0.8660613 0.7420765
+    ## 8  K. pneumoniae       1 0.9498495   0.9909091   0.9295352 0.8743316
+    ## 9  K. pneumoniae       2 0.9040816   0.9884615   0.8736111 0.7385057
+    ## 10 K. pneumoniae       3 0.8886619   0.9776952   0.8549296 0.7185792
+    ## 11 K. pneumoniae       4 0.8676171   0.9630996   0.8312236 0.6850394
+    ## 12 K. pneumoniae       5 0.8671400   0.9259259   0.8449721 0.6925208
 
 ``` r
-# Kp Species
-specStats(mixedKpRes, "Kp")
-```
-
-    ##    Accuracy     Kappa AccuracyLower AccuracyUpper AccuracyNull
-    ## 1 0.9451665 0.8598316     0.9384377     0.9513612    0.7156783
-    ## 2 0.9869609 0.9705804     0.9778059     0.9930394    0.6690070
-    ## 3 0.9755102 0.9376392     0.9637792     0.9842473    0.7346939
-    ## 4 0.9560776 0.8859750     0.9412902     0.9680338    0.7252298
-    ## 5 0.9205703 0.7850371     0.9018575     0.9367104    0.7240326
-    ## 6 0.8864097 0.6804704     0.8649326     0.9055459    0.7261663
-    ##   AccuracyPValue McnemarPValue Sensitivity Specificity Pos.Pred.Value
-    ## 1   0.000000e+00  1.236630e-27   0.8392857   0.9872304      0.9631148
-    ## 2  1.405346e-149  1.000000e+00   0.9818182   0.9895052      0.9788520
-    ## 3   1.180997e-94  3.074342e-01   0.9653846   0.9791667      0.9436090
-    ## 4   5.659585e-80  1.955081e-05   0.8661710   0.9901408      0.9708333
-    ## 5   4.844728e-54  1.841850e-13   0.7343173   0.9915612      0.9707317
-    ## 6   7.841891e-35  8.062992e-18   0.6222222   0.9860335      0.9438202
-    ##   Neg.Pred.Value Precision    Recall        F1 Prevalence Detection.Rate
-    ## 1      0.9392549 0.9631148 0.8392857 0.8969466  0.2843217      0.2386271
-    ## 2      0.9909910 0.9788520 0.9818182 0.9803328  0.3309930      0.3249749
-    ## 3      0.9873950 0.9436090 0.9653846 0.9543726  0.2653061      0.2561224
-    ## 4      0.9512855 0.9708333 0.8661710 0.9155206  0.2747702      0.2379980
-    ## 5      0.9073359 0.9707317 0.7343173 0.8361345  0.2759674      0.2026477
-    ## 6      0.8737624 0.9438202 0.6222222 0.7500000  0.2738337      0.1703854
-    ##   Detection.Prevalence Balanced.Accuracy       n
-    ## 1            0.2477660         0.9132581 Overall
-    ## 2            0.3319960         0.9856617       1
-    ## 3            0.2714286         0.9722756       2
-    ## 4            0.2451481         0.9281559       3
-    ## 5            0.2087576         0.8629393       4
-    ## 6            0.1805274         0.8041279       5
-
-``` r
+# Function to calculate Resistance Stats
 resStats <- function(resDf, posClass = "pos") {
     d1 <- map_df(1:5, function(n) {
         cm <- confusionMatrix(data = resDf$posPred[resDf$n == n], 
@@ -698,76 +809,64 @@ resStats <- function(resDf, posClass = "pos") {
     
     ret <- rbind(data.frame(as.list(c(cm2$overall, cm2$byClass))), d1)
     ret$n <- c("Overall", 1, 2, 3, 4, 5)
+    ret$orgResults <- resDf$orgResults[1]
+    
+    ret <- select(ret, orgResults, n, Accuracy,
+                  Sensitivity, Specificity, Precision)
     
     return(ret)
 }
 
-# Ab Species
-resStats(mixedAbRes)
+# Resistance Stats
+mixedResStats <- resStats(mixedAbRes) %>%
+    full_join(resStats(mixedKpRes))
+
+mixedResStats
 ```
 
-    ##   Accuracy     Kappa AccuracyLower AccuracyUpper AccuracyNull
-    ## 1    0.904 0.6065774     0.8954970     0.9120279        0.863
-    ## 2    0.980 0.9198204     0.9692800     0.9877417        0.860
-    ## 3    0.903 0.6198166     0.8829522     0.9206355        0.871
-    ## 4    0.882 0.5637643     0.8603723     0.9013475        0.852
-    ## 5    0.866 0.4403375     0.8433072     0.8865117        0.855
-    ## 6    0.889 0.4570322     0.8678739     0.9078021        0.877
-    ##   AccuracyPValue McnemarPValue Sensitivity Specificity Pos.Pred.Value
-    ## 1   6.043112e-19  1.992162e-02   0.6875912   0.9383546      0.6390773
-    ## 2   2.087008e-40  1.390630e-02   0.9714286   0.9813953      0.8947368
-    ## 3   1.051712e-03  4.878252e-05   0.7829457   0.9207807      0.5941176
-    ## 4   3.514773e-03  2.136697e-02   0.6891892   0.9154930      0.5862069
-    ## 5   1.731055e-01  3.419826e-01   0.4965517   0.9286550      0.5413534
-    ## 6   1.334245e-01  1.839070e-01   0.4878049   0.9452680      0.5555556
-    ##   Neg.Pred.Value Precision    Recall        F1 Prevalence Detection.Rate
-    ## 1      0.9498006 0.6390773 0.6875912 0.6624473      0.137         0.0942
-    ## 2      0.9952830 0.8947368 0.9714286 0.9315068      0.140         0.1360
-    ## 3      0.9662651 0.5941176 0.7829457 0.6755853      0.129         0.1010
-    ## 4      0.9443099 0.5862069 0.6891892 0.6335404      0.148         0.1020
-    ## 5      0.9158016 0.5413534 0.4965517 0.5179856      0.145         0.0720
-    ## 6      0.9293722 0.5555556 0.4878049 0.5194805      0.123         0.0600
-    ##   Detection.Prevalence Balanced.Accuracy       n
-    ## 1               0.1474         0.8129729 Overall
-    ## 2               0.1520         0.9764120       1
-    ## 3               0.1700         0.8518632       2
-    ## 4               0.1740         0.8023411       3
-    ## 5               0.1330         0.7126033       4
-    ## 6               0.1080         0.7165364       5
+    ##       orgResults       n  Accuracy Sensitivity Specificity Precision
+    ## 1   A. baumannii Overall 0.5142000   0.9708029   0.4417149 0.2163305
+    ## 2   A. baumannii       1 0.4350000   1.0000000   0.3430233 0.1985816
+    ## 3   A. baumannii       2 0.4700000   1.0000000   0.3915040 0.1957511
+    ## 4   A. baumannii       3 0.5400000   0.9662162   0.4659624 0.2391304
+    ## 5   A. baumannii       4 0.5390000   0.9310345   0.4725146 0.2303754
+    ## 6   A. baumannii       5 0.5870000   0.9593496   0.5347777 0.2243346
+    ## 7  K. pneumoniae Overall 0.7916328   0.9707521   0.7610556 0.4095182
+    ## 8  K. pneumoniae       1 0.8726179   0.9651163   0.8533333 0.5783972
+    ## 9  K. pneumoniae       2 0.7938776   0.9833333   0.7674419 0.3710692
+    ## 10 K. pneumoniae       3 0.7701736   0.9849624   0.7364066 0.3700565
+    ## 11 K. pneumoniae       4 0.7515275   0.9803922   0.7092883 0.3836317
+    ## 12 K. pneumoniae       5 0.7687627   0.9428571   0.7399527 0.3750000
+
+### Plot statistics from simulated mixtures
 
 ``` r
-# Kp Species
-resStats(mixedKpRes)
+mixedSpecStats %>%
+    gather(statistic, value, -orgResults, -n) %>%
+    ggplot(aes(x = n, y = value)) +
+    geom_col(position = "dodge") +
+    facet_grid(orgResults ~ statistic) +
+    ylab("Value") +
+    xlab("Number of Species in Mixture") +
+    ggtitle("Species-Level Detection")
 ```
 
-    ##    Accuracy     Kappa AccuracyLower AccuracyUpper AccuracyNull
-    ## 1 0.7106011 0.3570065     0.6977110     0.7232411    0.8541836
-    ## 2 0.7933801 0.5043871     0.7668973     0.8181176    0.8274824
-    ## 3 0.7244898 0.3438151     0.6953613     0.7522625    0.8775510
-    ## 4 0.6956078 0.3288010     0.6657157     0.7243180    0.8641471
-    ## 5 0.6720978 0.3233238     0.6417440     0.7014155    0.8441955
-    ## 6 0.6663286 0.3001299     0.6359266     0.6957335    0.8580122
-    ##   AccuracyPValue McnemarPValue Sensitivity Specificity Pos.Pred.Value
-    ## 1      1.0000000 2.318525e-299   0.9805014   0.6645269      0.3328605
-    ## 2      0.9976757  1.032448e-43   0.9825581   0.7539394      0.4543011
-    ## 3      1.0000000  1.638073e-58   0.9833333   0.6883721      0.3056995
-    ## 4      1.0000000  1.300360e-64   0.9849624   0.6501182      0.3067916
-    ## 5      1.0000000  5.517788e-69   0.9803922   0.6151990      0.3198294
-    ## 6      1.0000000  1.168826e-69   0.9714286   0.6158392      0.2950108
-    ##   Neg.Pred.Value Precision    Recall        F1 Prevalence Detection.Rate
-    ## 1      0.9950160 0.3328605 0.9805014 0.4969996  0.1458164      0.1429732
-    ## 2      0.9952000 0.4543011 0.9825581 0.6213235  0.1725176      0.1695085
-    ## 3      0.9966330 0.3056995 0.9833333 0.4664032  0.1224490      0.1204082
-    ## 4      0.9963768 0.3067916 0.9849624 0.4678571  0.1358529      0.1338100
-    ## 5      0.9941520 0.3198294 0.9803922 0.4823151  0.1558045      0.1527495
-    ## 6      0.9923810 0.2950108 0.9714286 0.4525790  0.1419878      0.1379310
-    ##   Detection.Prevalence Balanced.Accuracy       n
-    ## 1            0.4295288         0.8225141 Overall
-    ## 2            0.3731194         0.8682488       1
-    ## 3            0.3938776         0.8358527       2
-    ## 4            0.4361593         0.8175403       3
-    ## 5            0.4775967         0.7977956       4
-    ## 6            0.4675456         0.7936339       5
+``` r
+ggsave("../results/simSpecStats.pdf", width = 210, height = 80, units = "mm", useDingbats = F)
+
+mixedResStats %>%
+    gather(statistic, value, -orgResults, -n) %>%
+    ggplot(aes(x = n, y = value)) +
+    geom_col(position = "dodge") +
+    facet_grid(orgResults ~ statistic) +
+    ylab("Value") +
+    xlab("Number of Species in Mixture") +
+    ggtitle("Colistin Resistance Detection")
+```
+
+``` r
+ggsave("../results/simResStats.pdf", width = 210, height = 80, units = "mm", useDingbats = F)
+```
 
 Two-Species UTI Mixtures
 ------------------------
@@ -814,55 +913,51 @@ saveRDS(twoKpRes, file = "../temp/twoKpRes.rds")
 ### Plot scores vs cutoff
 
 ``` r
-tholdSpecies <- thold %>%
-    filter(str_detect(type, "species")) %>%
-    mutate(orgResults = ifelse(str_detect(type, "Ab"),
-                               "A. baumannii",
-                               "K. pneumoniae"))
+tholdSpecies <- mixedThold %>%
+    filter(str_detect(type, "species"))
 
 twoRes %>%
-    ggplot(aes(x = as.factor(percentTarget), y = speciesVsOther, fill = Colistin)) +
-    geom_hline(data = tholdSpecies, aes(yintercept = threshold), 
-               size = 1, linetype = "dashed") +
+    ggplot(aes(x = as.factor(percentTarget), y = log10(speciesVsOther), fill = Colistin)) +
+    #geom_hline(data = tholdSpecies, aes(yintercept = threshold), 
+    #           size = 1, linetype = "dashed") +
     geom_jitter(width = 0.25, shape = 21) +
     facet_wrap(~orgResults, ncol = 2) +
     scale_fill_discrete(breaks = c("resistant", "susceptible")) +
     xlab("Percent Target Species by Volume") +
-    ylab("Species Score") +
+    ylab("Species log(Score)") +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
-          legend.position = "bottom") +
-    ylim(c(0, 1))
+          legend.position = "bottom") #+
 ```
 
 ``` r
+    #ylim(c(0, 1))
+
 ggsave("../results/twoSpeciesSpecRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)
 
 
-tholdRes <- thold %>%
-    filter(str_detect(type, "res")) %>%
-    mutate(orgResults = ifelse(str_detect(type, "Ab"),
-                               "A. baumannii",
-                               "K. pneumoniae"))
+tholdRes <- mixedThold %>%
+    filter(str_detect(type, "res"))
 ```
 
 ``` r
 twoRes %>%
-    ggplot(aes(x = as.factor(percentTarget), y = pos, fill = Colistin)) +
-    geom_hline(data = tholdRes, aes(yintercept = threshold), 
-               size = 1, linetype = "dashed") +
+    ggplot(aes(x = as.factor(percentTarget), y = log10(pos), fill = Colistin)) +
+    #geom_hline(data = tholdRes, aes(yintercept = log10(threshold)), 
+    #           size = 1, linetype = "dashed") +
     geom_jitter(width = 0.25, shape = 21) +
     facet_wrap(~orgResults, ncol = 2) +
     scale_fill_discrete(breaks = c("resistant", "susceptible")) +
     xlab("Percent Target Species by Volume") +
-    ylab("Colistin-Resistance Score") +
+    ylab("Colistin Resistance log[Score]") +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
-          legend.position = "bottom") +
-    ylim(c(0, 1))
+          legend.position = "bottom") #+
 ```
 
 ``` r
+    #ylim(c(0, 1))
+
 ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)
 ```
 
@@ -880,7 +975,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-10-26                  
+    ##  date     2017-10-27                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.4.2)
@@ -966,7 +1061,6 @@ session_info()
     ##  robustbase           0.92-7   2016-12-09 CRAN (R 3.4.2)
     ##  rpart                4.1-11   2017-03-13 CRAN (R 3.4.2)
     ##  rprojroot            1.2      2017-01-16 CRAN (R 3.4.2)
-    ##  rstudioapi           0.7      2017-09-07 CRAN (R 3.4.2)
     ##  rvest                0.3.2    2016-06-17 CRAN (R 3.4.2)
     ##  scales               0.5.0    2017-08-24 CRAN (R 3.4.2)
     ##  sfsmisc              1.1-1    2017-06-08 CRAN (R 3.4.2)

@@ -87,22 +87,42 @@ exampleSpec <- twoSpeciesSpecInfo %>%
            targetOrg = ifelse(Ab != "other", "A. baumannii", targetOrg),
            targetOrg = ifelse(Kp != "other", "K. pneumoniae", targetOrg)) %>%
     filter(!is.na(targetOrg)) %>%
-    group_by(targetOrg, percentTarget) %>%
-    do(.[1, ])
+    group_by(targetOrg, percentTarget, Ab, Kp) %>%
+    do(.[2, ])
 
 
 
 exampleSpec %>%
+    filter(targetOrg == "A. baumannii") %>%
+    mutate(res = ifelse(Ab == "pos", "Colistin-Resistant", "Colistin-Susceptible")) %>%
     left_join(spec) %>%
     ggplot(aes(x = mz, y = relInt*100)) + 
     geom_line() +
-    facet_grid(percentLabs ~ targetOrg) +
+    facet_grid(percentLabs ~ res) +
     ylab("Relative Intensity") +
-    xlab(expression(italic("m/z")))
+    xlab(expression(italic("m/z"))) +
+    ggtitle(expression(italic("A. baumannii")))
 ```
 
 ``` r
-ggsave("../results/twoSpeciesMixtureSpectra.pdf", width = 200, height = 120, unit = "mm", useDingbats = F)
+ggsave("../results/AbTwoSpeciesMixtureSpectra.pdf", width = 200, 
+       height = 120, unit = "mm", useDingbats = F)
+
+exampleSpec %>%
+    filter(targetOrg == "K. pneumoniae") %>%
+    mutate(res = ifelse(Kp == "pos", "Colistin-Resistant", "Colistin-Susceptible")) %>%
+    left_join(spec) %>%
+    ggplot(aes(x = mz, y = relInt*100)) + 
+    geom_line() +
+    facet_grid(percentLabs ~ res) +
+    ylab("Relative Intensity") +
+    xlab(expression(italic("m/z"))) +
+    ggtitle(expression(italic("K. pneumoniae")))
+```
+
+``` r
+ggsave("../results/KpTwoSpeciesMixtureSpectra.pdf", width = 200, 
+       height = 120, unit = "mm", useDingbats = F)
 ```
 
 Session Info
