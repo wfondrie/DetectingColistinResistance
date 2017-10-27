@@ -30,6 +30,8 @@ source("../R/preProcessSpec.R")
 source("../R/extract.R")
 source("../R/createNewFeatureTbl.R")
 
+set.seed(585746)
+
 featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
 ```
 
@@ -101,7 +103,8 @@ exampleSpec %>%
     facet_grid(percentLabs ~ res) +
     ylab("Relative Intensity") +
     xlab(expression(italic("m/z"))) +
-    ggtitle(expression(italic("A. baumannii")))
+    ggtitle(expression(italic("A. baumannii"))) +
+    coolTheme
 ```
 
 ``` r
@@ -117,7 +120,8 @@ exampleSpec %>%
     facet_grid(percentLabs ~ res) +
     ylab("Relative Intensity") +
     xlab(expression(italic("m/z"))) +
-    ggtitle(expression(italic("K. pneumoniae")))
+    ggtitle(expression(italic("K. pneumoniae"))) +
+    coolTheme
 ```
 
 ``` r
