@@ -101,8 +101,6 @@ exampleSpec %>%
     xlab(expression(italic("m/z")))
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\mixtureAnalysis_files/figure-markdown_github-ascii_identifiers/plotSpec-1.png)
-
 ``` r
 ggsave("../results/twoSpeciesMixtureSpectra.pdf", width = 200, height = 120, unit = "mm", useDingbats = F)
 ```
@@ -121,7 +119,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-10-25                  
+    ##  date     2017-10-26                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.4.2)

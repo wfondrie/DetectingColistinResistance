@@ -224,8 +224,8 @@ cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))
 session_info()
 ```
 
-    ## 15352.9 sec elapsed
-    ## Execution time: 256 min
+    ## 15089.05 sec elapsed
+    ## Execution time: 251 min
     ## 
     ##  setting  value                       
     ##  version  R version 3.4.2 (2017-09-28)
@@ -234,7 +234,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-10-25                  
+    ##  date     2017-10-26                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.4.2)

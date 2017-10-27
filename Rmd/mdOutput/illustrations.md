@@ -68,8 +68,6 @@ featurePlot <- specDat %>%
 featurePlot 
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-1.png)
-
 ``` r
 ggsave("../results/featureSelect_1.pdf", width = 105, height = 100, unit = "mm", useDingbats = F)
 
@@ -81,13 +79,9 @@ singlePlot <- specDat %>%
     ylab("Relative Intensity")
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-2.png)
-
 ``` r
 singlePlot
 ```
-
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-3.png)
 
 ``` r
 ggsave("../results/singlePlot.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
@@ -117,8 +111,6 @@ featurePlotZoom1 <- specDat %>%
 featurePlotZoom1
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-4.png)
-
 ``` r
 ggsave("../results/featureSelect_2_1.pdf",  width = 30, height = 20, unit = "mm", useDingbats = F)
 
@@ -139,8 +131,6 @@ featurePlotZoom2 <- specDat %>%
 
 featurePlotZoom2
 ```
-
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/createFeatures-5.png)
 
 ``` r
 ggsave("../results/featureSelect_2_2.pdf",  width = 30, height = 20, unit = "mm", useDingbats = F)
@@ -200,8 +190,6 @@ spPlot %>%
   facet_wrap(~ spc, ncol = 1)
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/realVsSim-1.png)
-
 ``` r
 ggsave("../results/individualSpec.pdf", width = 105, height = 100, unit = "mm", useDingbats = F)
 
@@ -215,8 +203,6 @@ cmb <- specDat %>%
   group_by(spec_id) %>%
   do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum"))
 ```
-
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/realVsSim-2.png)
 
 ``` r
 cmbSpec <- extractSpectra(cmb$massSpecObj[[1]])
@@ -242,8 +228,6 @@ cmbSpecNorm %>%
        x = expression(italic("m/z")),
        y = "Relative Intensity")
 ```
-
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/realVsSim-3.png)
 
 ``` r
 ggsave("../results/inSilicoSpec.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
@@ -277,8 +261,6 @@ origSpecNorm %>%
        x = expression(italic("m/z")),
        y = "Relative Intensity")
 ```
-
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/realVsSim-4.png)
 
 ``` r
 ggsave("../results/experimentalSpec.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
@@ -327,8 +309,6 @@ feats %>%
     facet_wrap(~ type, ncol = 2)
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/mixtureFeatureExtraction-1.png)
-
 ``` r
 ggsave("../results/featureComparison.pdf", width = 160, height = 50, units = "mm", useDingbats = F)
 
@@ -352,8 +332,6 @@ feats %>%
     ylab("Feature Intensity in Mixture")
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/mixtureFeatureExtraction-2.png)![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\illustrations_files/figure-markdown_github-ascii_identifiers/mixtureFeatureExtraction-3.png)
-
 ``` r
 ggsave("../results/interferences.pdf", width = 50, height = 50, units = "mm", useDingbats = F)
 ```
@@ -372,7 +350,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-10-25                  
+    ##  date     2017-10-26                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.4.2)
@@ -469,6 +447,7 @@ session_info()
     ##  stringr            * 1.2.0    2017-02-18 CRAN (R 3.4.2)
     ##  survival             2.41-3   2017-04-04 CRAN (R 3.4.2)
     ##  tibble             * 1.3.4    2017-08-22 CRAN (R 3.4.2)
+    ##  tictoc             * 1.0      2014-06-17 CRAN (R 3.4.1)
     ##  tidyr              * 0.7.2    2017-10-16 CRAN (R 3.4.2)
     ##  tidyselect           0.2.2    2017-10-10 CRAN (R 3.4.2)
     ##  tidyverse          * 1.1.1    2017-01-27 CRAN (R 3.4.2)

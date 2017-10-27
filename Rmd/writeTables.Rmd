@@ -6,8 +6,7 @@ author: "William E Fondrie"
 ```{r setup, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, 
                       message = FALSE, 
-                      results = "hide", 
-                      cache = T)
+                      results = "hide")
 ```
 
 ## Load Libraries

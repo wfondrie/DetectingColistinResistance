@@ -90,13 +90,9 @@ feattbl %>%
   theme(axis.title.x = element_blank())
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/peaks-1.png)
-
 ``` r
 ggsave("../results/resPeaks.pdf", width = 105, height = 50, unit = "mm", useDingbats = F)
 ```
-
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/peaks-2.png)
 
 Plot of the Isolate Dataset
 ---------------------------
@@ -126,8 +122,6 @@ specInfo %>%
         legend.key.size = unit(0.75, "lines"),
         legend.title = element_blank())
 ```
-
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/libraryDistro-1.png)
 
 ``` r
 ggsave("../results/library.pdf", height = 125, width = 105, unit = "mm", useDingbats = F)
@@ -160,8 +154,6 @@ specInfo %>%
         axis.title.x = element_text(size = 10))
 ```
 
-![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/libraryDistro-2.png)![](C:\Users\WEF\DetectingColistinResistance\Rmd\mdOutput\makeMiscFigures_files/figure-markdown_github-ascii_identifiers/libraryDistro-3.png)
-
 ``` r
 ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", useDingbats = F)
 
@@ -183,7 +175,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-10-25                  
+    ##  date     2017-10-26                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.4.2)

@@ -12,7 +12,8 @@ output:
 ```{r, include = FALSE, cache = FALSE}
 knitr::opts_chunk$set(warning = FALSE, 
                       message = FALSE,
-                      results = "false")
+                      results = "hide",
+                      fig.show = "hide")
 
 knitr::opts_knit$set(verbose = TRUE)
 ```

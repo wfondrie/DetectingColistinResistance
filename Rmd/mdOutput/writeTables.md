@@ -214,7 +214,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-10-25                  
+    ##  date     2017-10-26                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.4.2)
@@ -240,6 +240,7 @@ session_info()
     ##  dimRed               0.1.0    2017-05-04 CRAN (R 3.4.2)
     ##  dplyr              * 0.7.4    2017-09-28 CRAN (R 3.4.2)
     ##  DRR                  0.0.2    2016-09-15 CRAN (R 3.4.2)
+    ##  e1071                1.6-8    2017-02-02 CRAN (R 3.4.2)
     ##  evaluate             0.10.1   2017-06-24 CRAN (R 3.4.2)
     ##  forcats            * 0.2.0    2017-01-23 CRAN (R 3.4.2)
     ##  foreach              1.4.3    2015-10-13 CRAN (R 3.4.2)
