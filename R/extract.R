@@ -1,3 +1,6 @@
+library(tidyverse)
+library(stringr)
+
 # extractPeaks()
 
 # massPeaks - a MassPeaks object from MALDIquant

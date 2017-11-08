@@ -1,0 +1,193 @@
+---
+title: "Baseline Classifiers for Comparison"
+author: "William E Fondrie"
+---
+
+## Load libraries and prepare workspace  
+```{r setup, include = FALSE, cache = FALSE}
+# data manipulation
+suppressMessages(library(tidyverse, quietly = T))
+library(stringr, quietly = T)
+library(forcats, quietly = T)
+
+# machine learning tools
+library(PRROC, quietly = T)
+library(caret, quietly = T)
+
+# for session info
+library(devtools, quietly = T)
+
+# ggplot2 theme
+source("../R/ggplotTheme.R")
+theme_set(coolTheme)
+
+# Other useful functions
+source("../R/utilityFunctions.R")
+
+# for reproducibility
+set.seed(0847532)
+```
+
+## Load Data
+```{r loadData}
+trainList <- readRDS("../temp/trainDatList.rds")
+testList <- readRDS("../temp/testDatList.rds")
+```
+
+
+## Baseline Classifiers on Isolate Spectra  
+
+### Single Feature  
+```{r singleFeatClassifier}
+singleAb <- testList$Ab %>%
+    select(type, Ab, mz1912.5448, mz2036.4927) %>%
+    rename(truth = Ab,
+           speciesVsOther = mz1912.5448,
+           pos = mz2036.4927)
+
+singleKp <- testList$Kp %>%
+    select(type, Kp, mz1841.4497, mz1973.1961) %>%
+    rename(truth = Kp,
+           speciesVsOther = mz1973.1961,
+           pos = mz1841.4497)
+
+
+sfAbRoc <- makeRocCurves(singleAb)
+sfAbPr <- makePrCurves(singleAb)
+
+sfKpRoc <- makeRocCurves(singleKp)
+sfKpPr <- makePrCurves(singleKp)
+
+sfRes <- list(sfAbRoc = sfAbRoc,
+              sfAbPr = sfAbPr,
+              sfKpRoc = sfKpRoc,
+              sfKpPr = sfKpPr)
+
+saveRDS(sfRes, "../temp/sfRes.rds")
+```
+
+### Nearest Neighbor
+```{r nearestNeighborClassifier}
+# Scales the rows of a matrix to unit vectors
+scaleVectors <- function(m) {
+    t(apply(m, 1, function(x) x/as.vector(sqrt(x %*% x))))
+}
+
+# picks the maximum column of a matrix for each row
+pickMaxCol <- function(m, colname = "test") {
+    dat <- apply(m, 1, function(x) max(x))
+    df <- data.frame(id = names(dat),
+                     x = dat)
+    
+    names(df)[2] <- colname
+    
+    return(df)
+}
+
+# The actual classifier
+
+# for testing:
+trainDat <- trainList
+testDat <- testList
+species <- "Ab"
+
+nnClassifier <- function(trainDat, testDat, species = "Ab") {
+    
+    # format data
+    trainDat <- trainDat[[species]]
+    testDat <- testDat[[species]]
+    
+    names(trainDat)[names(trainDat) == species] <- "truth"
+    names(testDat)[names(testDat) == species] <- "truth"
+    
+    # create matrices
+    pos <- trainDat %>%
+        filter(truth == "pos") %>%
+        select(starts_with("mz")) %>%
+        as.matrix(.) %>%
+        scaleVectors(.)
+    
+    neg <- trainDat %>%
+        filter(truth == "neg") %>%
+        select(starts_with("mz")) %>%
+        as.matrix(.) %>%
+        scaleVectors(.)
+    
+    other <- trainDat %>%
+        filter(truth == "other") %>%
+        select(starts_with("mz")) %>%
+        as.matrix(.) %>%
+        scaleVectors(.)
+    
+    testMat <- testDat %>%
+        select(starts_with("mz")) %>%
+        as.matrix(.) %>%
+        scaleVectors(.)
+    
+    row.names(testMat) <- testDat$id
+    
+    # calculate distances
+    pos <- pickMaxCol(testMat %*% t(pos), "pos")
+    neg <- pickMaxCol(testMat %*% t(neg), "neg")
+    other <- pickMaxCol(testMat %*% t(other), "other")
+    
+    # merge scores
+    scores <- pos %>%
+        full_join(neg) %>%
+        full_join(other) %>%
+        mutate(summed = neg + pos + other,
+               pos = pos / summed,
+               neg = neg / summed,
+               other = other / summed,
+               speciesVsOther = pos + neg)
+    
+    ret <- testDat %>%
+        select(type, id, truth) %>%
+        full_join(scores) %>%
+        select(-summed)
+    
+   return(ret) 
+}
+
+# Classify test set
+nnAb <- nnClassifier(trainList, testList, species = "Ab")
+nnKp <- nnClassifier(trainList, testList, species = "Kp")
+
+# ROC and PR curves
+nnAbRoc <- makeRocCurves(nnAb)
+nnAbPr <- makePrCurves(nnAb)
+
+nnKpRoc <- makeRocCurves(nnKp)
+nnKpPr <- makePrCurves(nnKp)
+
+nnRes <- list(nnAbRoc = nnAbRoc,
+              nnAbPr = nnAbPr,
+              nnKpRoc = nnKpRoc,
+              nnKpPr = nnKpPr)
+
+saveRDS(nnRes, "../temp/nnRes.rds")
+```
+## Baseline Classifiers on Simulated Spectra  
+### Single Feature  
+```{r singleFeatClassifierMx}
+
+
+```
+
+### Nearest Neighbor  
+```{r nnClassifierMx}
+
+
+```
+
+## Baseline Classifiers on in vitro Mixtures  
+### Single feature  
+```{r singleFeatClassifier2Mx}
+
+```
+
+### Nearest Neighbor
+```{r nnClassifier2Mx}
+
+```
+

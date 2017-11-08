@@ -58,169 +58,137 @@ formatResults <- function(model, dataList) {
 
 ```
 
-### Acinetobacter baumannii
+### Import Acinetobacter baumannii
 ```{r AbSingleSpec, results='markup'}
 abMod <- xgb.load(mods$Ab)
 abRes <- formatResults(abMod, testdmatList$Ab)
 
 # Ab PR curves
-abPosPR <- pr.curve(abRes$pos[abRes$truth == "pos"], 
-                    abRes$pos[abRes$truth != "pos"], curve = T)
-
-abSpeciesPR <- pr.curve(abRes$speciesVsOther[abRes$truth != "other"], 
-                        abRes$speciesVsOther[abRes$truth ==  "other"], curve = T)
+abPr <- makePrCurves(abRes)
 
 # Ab ROC curves
-abPosROC <- roc.curve(abRes$pos[abRes$truth == "pos"], 
-                    abRes$pos[abRes$truth != "pos"], curve = T)
-
-abSpeciesROC <- roc.curve(abRes$speciesVsOther[abRes$truth != "other"], 
-                        abRes$speciesVsOther[abRes$truth ==  "other"], curve = T)
+abRoc <- makeRocCurves(abRes)
 
 saveRDS(abRes, file = "../temp/abRes.rds")
 ```
 
-### Klebsiella pneumoniae
+### Import Klebsiella pneumoniae
 ```{r KpSingleSpec, results="markup"}
 kpMod <- xgb.load(mods$Kp)
 kpRes <- formatResults(kpMod, testdmatList$Kp)
 
 # Kp PR curves
-kpPosPR <- pr.curve(kpRes$pos[kpRes$truth == "pos"], 
-                    kpRes$pos[kpRes$truth != "pos"], curve = T)
-
-kpSpeciesPR <- pr.curve(kpRes$speciesVsOther[kpRes$truth != "other"], 
-                        kpRes$speciesVsOther[kpRes$truth ==  "other"], curve = T)
+kpPr <- makePrCurves(kpRes)
 
 # Kp ROC curves
-kpPosROC <- roc.curve(kpRes$pos[kpRes$truth == "pos"], 
-                    kpRes$pos[kpRes$truth != "pos"], curve = T)
-
-kpSpeciesROC <- roc.curve(kpRes$speciesVsOther[kpRes$truth != "other"], 
-                        kpRes$speciesVsOther[kpRes$truth ==  "other"], curve = T)
+kpRoc <- makeRocCurves(kpRes)
 
 saveRDS(kpRes, file = "../temp/kpRes.rds")
 ```
 
 ### Plot PR and ROC Curves
-#### Acinetobacter PR  & ROC Curves
-```{r AbPR}
-# PR
-prnames <- c("Recall", "Precision", "threshold")
-prAb <- as.tibble(rbind(abPosPR$curve, abSpeciesPR$curve))
-names(prAb) <- prnames
-
-labsAb <- c(paste0("Resistant\nAUC = ", sigRound(abPosPR$auc.integral, 3)),
-            paste0("Species\nAUC = ", sigRound(abSpeciesPR$auc.integral, 3)))
-
-AbPrCurve <- prAb %>%
-    mutate(cond = c(rep(labsAb[1], nrow(abPosPR$curve)),
-                    rep(labsAb[2], nrow(abSpeciesPR$curve))),
-           cond = fct_rev(fct_relevel(as.factor(cond), labsAb))) %>%
-    ggplot(aes(x = Recall, y = Precision, color = cond)) +
-    geom_path(size = 1)  +
-    coord_equal() +
-    ylim(c(0, 1)) +
-    xlim(c(0, 1)) +
-    theme(legend.title = element_blank(),
-          legend.key.height = unit(1.2, "lines"),
-          legend.key.width = unit(0.6, "lines"),
-          legend.margin = margin(l = -0.5, unit = "lines"),
-          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
-    ggtitle(expression(italic("A. baumannii")))
-
-AbPrCurve
-ggsave("../results/AbPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
-
-# ROC
-rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
-rocAb <- as.tibble(rbind(abPosROC$curve, 
-                         abSpeciesROC$curve))
-names(rocAb) <- rocnames
-
-roclabsAb <- c(paste0("Resistant\nAUC = ", sigRound(abPosROC$auc, 3)),
-               paste0("Species\nAUC = ", sigRound(abSpeciesROC$auc, 3)))
-
-
-AbRocCurve <- rocAb %>%
-    mutate(cond = c(rep(roclabsAb[1], nrow(abPosROC$curve)),
-                    rep(roclabsAb[2], nrow(abSpeciesROC$curve))),
-           cond = fct_rev(fct_relevel(as.factor(cond), roclabsAb))) %>%
-    ggplot(aes(x = `1 - Specificity (FPR)`, y = `Sensitivity (TPR)`, color = cond)) +
-    geom_abline(xintercept = 0, slope = 1) +
-    geom_path(size = 1) +
-    ylim(c(0, 1)) +
-    xlim(c(0, 1)) +
-    coord_equal() +
-    theme(legend.title = element_blank(),
-          legend.key.height = unit(1.2, "lines"),
-          legend.key.width = unit(0.6, "lines"),
-          legend.margin = margin(l = -0.5, unit = "lines"),
-          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
-    ggtitle(expression(italic("A. baumannii")))
-
-AbRocCurve
-ggsave("../results/AbRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
-
+#### Plot function
+```{r plotFunction}
+# dat should be the ouput of PRROC::pr.curve(..., curve = T) or roc.curve(..., curve = T)
+plotCurve <- function(dat, type = "ROC", title = NULL) {
+    # Main Plotting
+    p <- ggplot(dat, aes(x = V1, y = V2, color = classifier))
+    
+    if(type == "ROC") {
+        p <-  p + geom_abline(intercept = 0, slope = 1) +
+            xlab("1 - Specificity (FPR)") +
+            ylab("Sensitivity (TPR)")
+    } else {
+        p <- p + xlab("Recall") +
+            ylab("Precision")
+    }
+    
+    # Common theming
+    p <- p + geom_path(size = 1) +
+        ylim(c(0, 1)) +
+        xlim(c(0, 1)) +
+        coord_equal() +
+        theme(legend.title = element_blank(),
+              legend.key.height = unit(1.2, "lines"),
+              legend.key.width = unit(0.6, "lines"),
+              legend.margin = margin(l = -0.5, unit = "lines"),
+              plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
+        ggtitle(title)
+    
+    return(p)
+}
 ```
 
-#### Klebsiella pneumoniae PR  & ROC Curves
-```{r KpPR}
-# PR
-prnames <- c("Recall", "Precision", "threshold")
-prKp <- as.tibble(rbind(kpPosPR$curve, 
-                        kpSpeciesPR$curve))
-names(prKp) <- prnames
-
-labsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosPR$auc.integral, 3)),
-            paste0("Species\nAUC = ", sigRound(kpSpeciesPR$auc.integral, 3)))
-
-prKp %>%
-    mutate(cond = c(rep(labsKp[1], nrow(kpPosPR$curve)),
-                    rep(labsKp[2], nrow(kpSpeciesPR$curve))),
-           cond = fct_rev(fct_relevel(as.factor(cond), labsKp))) %>%
-    ggplot(aes(x = Recall, y = Precision, color = cond)) +
-    geom_path(size = 1)  +
-    ylim(c(0, 1)) +
-    xlim(c(0, 1)) +
-    coord_equal() +
-    theme(legend.title = element_blank(),
-          legend.key.height = unit(1.2, "lines"),
-          legend.key.width = unit(0.6, "lines"),
-          legend.margin = margin(l = -0.5, unit = "lines"),
-          plot.title = element_text(margin = margin(b = -0, unit = "lines"))) +
-    ggtitle(expression(italic("K. pneumoniae")))
-
-ggsave("../results/KpPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
-
-# ROC
-rocnames <- c("1 - Specificity (FPR)", "Sensitivity (TPR)", "threshold")
-rocKp <- as.tibble(rbind(kpPosROC$curve, 
-                         kpSpeciesROC$curve))
-names(rocKp) <- rocnames
-
-roclabsKp <- c(paste0("Resistant\nAUC = ", sigRound(kpPosROC$auc, 3)),
-               paste0("Species\nAUC = ", sigRound(kpSpeciesROC$auc, 3)))
-
-rocKp %>%
-    mutate(cond = c(rep(roclabsKp[1], nrow(kpPosROC$curve)),
-                    rep(roclabsKp[2], nrow(kpSpeciesROC$curve))),
-           cond = fct_rev(fct_relevel(as.factor(cond), roclabsKp))) %>%
-    ggplot(aes(x = `1 - Specificity (FPR)`, y = `Sensitivity (TPR)`, color = cond)) +
-    geom_abline(xintercept = 0, slope = 1) +
-    geom_path(size = 1) +
-    ylim(c(0, 1)) +
-    xlim(c(0, 1)) +
-    coord_equal() + 
-    theme(legend.title = element_blank(),
-          legend.key.height = unit(1.2, "lines"),
-          legend.key.width = unit(0.6, "lines"),
-          legend.margin = margin(l = -0.5, unit = "lines"),
-          plot.title = element_text(margin = margin(b = 0, unit = "lines"))) +
-    ggtitle(expression(italic("K. pneumoniae")))
-
-ggsave("../results/KpRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+#### Import baseline classifier results  
+```{r importBaselineResults}
+sfRes <- readRDS("../temp/sfRes.rds")
+nnRes <- readRDS("../temp/nnRes.rds")
 ```
+
+#### Function to Format ROC and PR results
+```{r formatCurveResults}
+combineResults <- function(mlResults, sfResults, nnResults, type = "species") {
+    ml <- as.tibble(mlResults[[type]]$curve) %>% mutate(classifier = "XGBoost")
+    sf <- as.tibble(sfResults[[type]]$curve) %>% mutate(classifier = "Single Feature")
+    nn <- as.tibble(nnResults[[type]]$curve) %>% mutate(classifier = "Nearest Neighbor")
+    
+    ml %>% rbind(sf) %>% rbind(nn)
+}
+```
+
+
+#### Acinetobacter ROC & PR Curves
+```{r plotAb}
+abTitleSpec <- expression(italic("A. baumannii")~"(Species)")
+abTitleRes <- expression(italic("A. baumannii")~"(Resistance)")
+
+# Species ROC
+abSpecRoc <- combineResults(abRoc, sfRes$sfAbRoc, nnRes$nnAbRoc, type = "species")
+plotCurve(abSpecRoc, type = "ROC", title = abTitleSpec)
+ggsave("../results/AbSpecRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+
+# Resistance ROC
+abPosRoc <- combineResults(abRoc, sfRes$sfAbRoc, nnRes$nnAbRoc, type = "pos")
+plotCurve(abPosRoc, type = "ROC", title = abTitleRes)
+ggsave("../results/AbResRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+
+# Species PR
+abSpecPr <- combineResults(abPr, sfRes$sfAbPr, nnRes$nnAbPr, type = "species")
+plotCurve(abSpecPr, type = "PR", title = abTitleSpec)
+ggsave("../results/AbSpecPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+
+# Resistance PR
+abPosPr <- combineResults(abPr, sfRes$sfAbPr, nnRes$nnAbPr, type = "pos")
+plotCurve(abPosPr, type = "PR", title = abTitleRes)
+ggsave("../results/AbResPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+```
+
+#### Klebsiella ROC & PR Curves
+```{r plotKp}
+kpTitleSpec <- expression(italic("K. pneumoniae")~"(Species)")
+kpTitleRes <- expression(italic("K. pneumoniae")~"(Resistance)")
+
+# Species ROC
+kpSpecRoc <- combineResults(kpRoc, sfRes$sfKpRoc, nnRes$nnKpRoc, type = "species")
+plotCurve(kpSpecRoc, type = "ROC", title = kpTitleSpec)
+ggsave("../results/KpSpecRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+
+# Resistance ROC
+kpPosRoc <- combineResults(kpRoc, sfRes$sfKpRoc, nnRes$nnKpRoc, type = "pos")
+plotCurve(kpPosRoc, type = "ROC", title = kpTitleRes)
+ggsave("../results/KpResRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+
+# Species PR
+kpSpecPr <- combineResults(kpPr, sfRes$sfKpPr, nnRes$nnKpPr, type = "species")
+plotCurve(kpSpecPr, type = "PR", title = kpTitleSpec)
+ggsave("../results/KpSpecPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+
+# Resistance PR
+kpPosPr <- combineResults(kpPr, sfRes$sfKpPr, nnRes$nnKpPr, type = "pos")
+plotCurve(kpPosPr, type = "PR", title = kpTitleRes)
+ggsave("../results/KpResPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+```
+
 
 ## New Confusion Matrices
 ```{r confusionMats, results='markup'}

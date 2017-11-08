@@ -59,7 +59,23 @@ specInfo <- tibble(fname = files) %>%
            Ab = ifelse(str_detect(type, "Acinetobacter baumannii - res"), "pos", "other"),
            Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), "pos", "other"),
            Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
-           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)))
+           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)),
+           strain = str_replace(id, " *[0-9]{8}", ""),
+           strain = str_replace(strain, "K_p_ ", "K pneumoniae -"),
+           strain = str_replace(strain, "mut_", "mut"),
+           strain = str_replace_all(strain, "[ _][0-9]([ _]|$)", ""),
+           strain = str_replace(strain, "[0-9]{4}-[0-9]{4}", ""),
+           strain = str_replace(strain, "\\([0-9]\\)", ""),
+           strain = str_replace(strain, "[0-9]{2}_[0-9]{2}", ""),
+           strain = str_replace(strain, "\\+.*", ""),
+           strain = str_replace(strain, " (col med|lyo pellet).*$", ""),
+           strain = str_replace(strain, "[_ ]+$", ""),
+           strain = ifelse(Kp == "other" & Ab == "other", "Other Species", strain))
+
+# specInfo %>%
+#     filter(Ab != "other" | Kp != "other") %>%
+#     group_by(type) %>%
+#     summarize(n = length(unique(strain)))
 
 trainIdx <- list(Ab = list(idx = createDataPartition(specInfo$Ab, p = 0.6, list = F),
                            regex = "Acinetobacter baumannii - res"),
