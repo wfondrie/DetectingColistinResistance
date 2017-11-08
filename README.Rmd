@@ -28,10 +28,11 @@ Order of analysis (see the Rmd subdirectory for details):
 1. [modelTraining.Rmd](Rmd/mdOutput/modelTraining.md)  
 2. [simulateComplexSpectra.Rmd](Rmd/mdOutput/simulateComplexSpectra.md)  
 3. [mixtureAnalysis.Rmd](Rmd/mdOutput/mixtureAnalysis.md)  
-4. [evaluateModels.Rmd](Rmd/mdOutput/evaluateModels.md)    
-5. [makeMiscFigures.Rmd](Rmd/mdOutput/makeMiscFigures.md)  
-6. [illustrations.Rmd](Rmd/mdOutput/illustrations.md)  
-7. [makeTables.Rmd](Rmd/mdOutput/makeTables.md)
+4. [evaluateModels.Rmd](Rmd/mdOutput/evaluateModels.md)  
+5. [baselineClassifiers.Rmd](Rmd/mdOutput/baselineClassifiers.md)  
+6. [makeMiscFigures.Rmd](Rmd/mdOutput/makeMiscFigures.md)  
+7. [illustrations.Rmd](Rmd/mdOutput/illustrations.md)  
+8. [makeTables.Rmd](Rmd/mdOutput/makeTables.md)
 
 ## Directory structure  
 To reproduce this analysis, the project directory must be structured as 
@@ -48,6 +49,7 @@ follows:
 |  |- extract.R
 |  `- preProcessSpec.R
 `- Rmd
+   |- baselineClassifiers.Rmd
    |- evaluateModels.Rmd
    |- illustrations.Rmd
    |- makeMiscFigures.Rmd
@@ -120,6 +122,7 @@ runAnalysis <- function(rmd) {
 files <- c("modelTraining", # Trains xgboost models
            "simulateComplexSpectra", # simulates polymicrobial spectra
            "mixtureAnalysis", # Imports spectra from experimental two-species
+           "baselineClassifiers", # Implements simple baseline classifiers
            "evaluateModels", # Calculate performance metrics and makes figures
            "makeMiscFigures", # Creates additional figures
            "illustrations", # Creates additional figures for illustrations
