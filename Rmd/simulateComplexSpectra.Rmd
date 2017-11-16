@@ -127,26 +127,46 @@ features <- readRDS("../temp/features.rds")
 
 specList <- preProcessSpec(files, hws = 80) # Same preprocessing
 
+# for debugging
+#save(specList, file = "../temp/specList.rda")
+#load("../temp/specList.rda")
+
 # rm files that contain multiple spectra
 multiSpecIdx <- map_lgl(specList, ~ metaData(.)$num > 1)
 specList <- specList[!multiSpecIdx]
 
 spec <- map_df(specList, extractSpectra)
 
-gc() # garbage collection. Free as much memory as possible.
+# Free some memory
+rm(specList)
+gc()
+
+simSpectra <- function(df, specDat) {
+    gc()
+    
+    df %>%
+        left_join(specDat, by = c("type", "id")) %>%
+        group_by(spec_id, id, type) %>%
+        do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt,
+                                            metaData = list(file = paste0("/cmb/",
+                                                                          .$spec_id[1],
+                                                                          ".mzXML")))) %>%
+        group_by(spec_id) %>%
+        do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum")) %>%
+        do(extractSpectra(.$massSpecObj)) %>%
+        select(-id)
+    
+}
+
+combosSmall <- combos %>% filter(str_detect(spec_id, "_[0-5]$"))
 
 # Takes ~30 min
 comboSpec <- combos %>% 
-    left_join(spec, by = c("type", "id")) %>%
     group_by(spec_id) %>%
-    group_by(spec_id, id, type) %>%
-    do(massSpecObj = createMassSpectrum(mass = .$mz, intensity = .$relInt, 
-                                        metaData = list(file = paste0("/cmb/", .$spec_id[1], ".mzXML")))) %>%
-    group_by(spec_id) %>%
-    do(massSpecObj = averageMassSpectra(.$massSpecObj, method = "sum")) %>%
-    do(extractSpectra(.$massSpecObj))
+    do(simSpectra(df = ., specDat = filter(spec, id %in% .$id))) %>%
+    rename(id = spec_id)
 
-saveRDS(comboSpec, "../temp/comboSpec.rds")
+#saveRDS(comboSpec, "../temp/comboSpec.rds")
 
 trainIdx <- readRDS("../temp/trainIdx.rds")
 
