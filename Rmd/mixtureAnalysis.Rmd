@@ -61,7 +61,8 @@ saveRDS(twoSpeciesSpecInfo, file = "../temp/twoSpeciesSpecInfo.rds")
 
 features <- readRDS("../temp/features.RDS")
 
-specList <- preProcessSpec(files, hws = 80) # Same preprocessing
+#specList <- preProcessSpec(files, hws = 80) # Same preprocessing
+specList <- unlist(map(files, preProcessSpec, hws = 80))
 
 spec <- map_df(specList, extractSpectra)
 

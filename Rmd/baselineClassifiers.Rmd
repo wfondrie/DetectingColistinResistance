@@ -9,6 +9,7 @@ author: "William E Fondrie"
 suppressMessages(library(tidyverse, quietly = T))
 library(stringr, quietly = T)
 library(forcats, quietly = T)
+library(broom, quietly = T)
 
 # machine learning tools
 library(PRROC, quietly = T)
@@ -26,6 +27,9 @@ source("../R/utilityFunctions.R")
 
 # for reproducibility
 set.seed(0847532)
+
+# for boostrapping
+nboot <- 2000
 ```
 
 ## Load Data
@@ -39,19 +43,31 @@ testList <- readRDS("../temp/testDatList.rds")
 
 ### Single Feature  
 ```{r singleFeatClassifier}
+# select and format data -------------------------------------------------------
+featAb <- tibble(col = names(testList$Ab)) %>%
+    filter(str_detect(col, "mz")) %>%
+    mutate(mz = as.numeric(str_match(col, "mz(.*)")[ , 2])) %>%
+    filter(nom2feat(1912, mz) == mz |
+               nom2feat(2036, mz) == mz)
+
 singleAb <- testList$Ab %>%
-    select(type, Ab, mz1912.5448, mz2036.4927) %>%
-    rename(truth = Ab,
-           speciesVsOther = mz1912.5448,
-           pos = mz2036.4927)
+    select_("type", "Ab", featAb$col[1], featAb$col[2]) #%>%
+
+names(singleAb) <- c("type", "truth", "speciesVsOther", "pos")
+
+
+featKp <- tibble(col = names(testList$Kp)) %>%
+    filter(str_detect(col, "mz")) %>%
+    mutate(mz = as.numeric(str_match(col, "mz(.*)")[ , 2])) %>%
+    filter(nom2feat(1841, mz) == mz |
+               nom2feat(1973, mz) == mz)
 
 singleKp <- testList$Kp %>%
-    select(type, Kp, mz1841.4497, mz1973.1961) %>%
-    rename(truth = Kp,
-           speciesVsOther = mz1973.1961,
-           pos = mz1841.4497)
+    select_("type", "Kp", featKp$col[1], featKp$col[2])
 
+names(singleKp) <- c("type", "truth", "speciesVsOther", "pos")
 
+# Calculate curves -------------------------------------------------------------
 sfAbRoc <- makeRocCurves(singleAb)
 sfAbPr <- makePrCurves(singleAb)
 
@@ -64,6 +80,27 @@ sfRes <- list(sfAbRoc = sfAbRoc,
               sfKpPr = sfKpPr)
 
 saveRDS(sfRes, "../temp/sfRes.rds")
+
+
+# Calulate curve statistics ----------------------------------------------------
+sfAbStat <- singleAb %>%
+    bootstrap(nboot) %>%
+    do(calcAUC(.)) %>%
+    mutate(org = "Ab")
+
+sfKpStat <- singleKp %>%
+    bootstrap(nboot) %>%
+    do(calcAUC(.)) %>%
+    mutate(org = "Kp")
+
+curveStat <- sfAbStat %>%
+    full_join(sfKpStat) %>% 
+    group_by(org, type, level) %>%
+    summarize(avg_AUC = mean(AUC),
+              ci_low = quantile(AUC, 0.05 / 2),
+              ci_high = quantile(AUC, 1 - 0.05 / 2))
+
+saveRDS(curveStat, "../temp/sfCurveStat.rds")
 ```
 
 ### Nearest Neighbor
@@ -89,7 +126,7 @@ pickMaxCol <- function(m, colname = "test") {
 # for testing:
 trainDat <- trainList
 testDat <- testList
-species <- "Ab"
+species <- "Kp"
 
 nnClassifier <- function(trainDat, testDat, species = "Ab") {
     
@@ -107,17 +144,23 @@ nnClassifier <- function(trainDat, testDat, species = "Ab") {
         as.matrix(.) %>%
         scaleVectors(.)
     
+    pos <- pos[!is.na(rowSums(pos)) != 0, ]
+    
     neg <- trainDat %>%
         filter(truth == "neg") %>%
         select(starts_with("mz")) %>%
         as.matrix(.) %>%
         scaleVectors(.)
     
+    neg <- neg[!is.na(rowSums(neg)), ]
+    
     other <- trainDat %>%
         filter(truth == "other") %>%
         select(starts_with("mz")) %>%
         as.matrix(.) %>%
         scaleVectors(.)
+    
+    other <- other[!is.na(rowSums(other)), ]
     
     testMat <- testDat %>%
         select(starts_with("mz")) %>%
@@ -128,8 +171,13 @@ nnClassifier <- function(trainDat, testDat, species = "Ab") {
     
     # calculate distances
     pos <- pickMaxCol(testMat %*% t(pos), "pos")
+    pos$pos[is.na(pos$pos)] <- 0
+    
     neg <- pickMaxCol(testMat %*% t(neg), "neg")
+    neg$neg[is.na(neg$neg)] <- 0
+    
     other <- pickMaxCol(testMat %*% t(other), "other")
+    other$other[is.na(other$other)] <- 1
     
     # merge scores
     scores <- pos %>%
@@ -166,6 +214,8 @@ nnRes <- list(nnAbRoc = nnAbRoc,
               nnKpPr = nnKpPr)
 
 saveRDS(nnRes, "../temp/nnRes.rds")
+
+
 ```
 ## Baseline Classifiers on Simulated Spectra  
 ### Single Feature  

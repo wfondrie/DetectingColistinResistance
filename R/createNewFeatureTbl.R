@@ -3,7 +3,6 @@
 # trainList - Should be trainIdx.rds. Tells which features belong with each model
 # specDf - extracted spectra. The output from extractSpectra()
 
-
 createNewFeatureTbl <- function(trainList, specDf, summaryDat, mzTol, fileName) {
     suffix <- if(str_detect(trainList$regex, "Acineto")) "_Ab" else "_Kp"
     

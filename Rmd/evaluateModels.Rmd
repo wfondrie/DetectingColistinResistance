@@ -12,6 +12,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
 suppressMessages(library(tidyverse, quietly = T))
 library(stringr, quietly = T)
 library(forcats, quietly = T)
+library(broom, quietly = T)
 
 # machine learning tools
 library(PRROC, quietly = T)
@@ -31,6 +32,12 @@ source("../R/utilityFunctions.R")
 
 # for reproducibility
 set.seed(0847532)
+
+# Bootstrap
+nboot <- 2000 #2000
+
+# for barplots
+dodge <- position_dodge(width = 0.9)
 ```
 
 ## Evaluation of Model Performance on Isolate Spectra in Library
@@ -70,6 +77,12 @@ abPr <- makePrCurves(abRes)
 abRoc <- makeRocCurves(abRes)
 
 saveRDS(abRes, file = "../temp/abRes.rds")
+
+# Ab curve statistics
+abCurveStat <- abRes %>%
+    bootstrap(nboot) %>%
+    do(calcAUC(.)) %>%
+    mutate(org = "Ab")
 ```
 
 ### Import Klebsiella pneumoniae
@@ -84,6 +97,23 @@ kpPr <- makePrCurves(kpRes)
 kpRoc <- makeRocCurves(kpRes)
 
 saveRDS(kpRes, file = "../temp/kpRes.rds")
+
+# Kp curve statistics
+kpCurveStat <- kpRes %>%
+    bootstrap(nboot) %>%
+    do(calcAUC(.)) %>%
+    mutate(org = "Kp")
+
+
+# Aggregate stats 
+curveStat <- abCurveStat %>%
+    full_join(kpCurveStat) %>% 
+    group_by(org, type, level) %>%
+    summarize(avg_AUC = mean(AUC),
+              ci_low = quantile(AUC, 0.05 / 2),
+              ci_high = quantile(AUC, 1 - 0.05 / 2)) %>%
+    mutate(classifier = "XGBoost")
+    
 ```
 
 ### Plot PR and ROC Curves
@@ -91,8 +121,12 @@ saveRDS(kpRes, file = "../temp/kpRes.rds")
 ```{r plotFunction}
 # dat should be the ouput of PRROC::pr.curve(..., curve = T) or roc.curve(..., curve = T)
 plotCurve <- function(dat, type = "ROC", title = NULL) {
+    dat <- dat %>%
+        mutate(classifier = fct_rev(as.factor(classifier)),
+               Level = fct_rev(as.factor(Level)))
+    
     # Main Plotting
-    p <- ggplot(dat, aes(x = V1, y = V2, color = classifier))
+    p <- ggplot(dat, aes(x = V1, y = V2, linetype = classifier, color = Level))
     
     if(type == "ROC") {
         p <-  p + geom_abline(intercept = 0, slope = 1) +
@@ -104,16 +138,18 @@ plotCurve <- function(dat, type = "ROC", title = NULL) {
     }
     
     # Common theming
-    p <- p + geom_path(size = 1) +
+    p <- p + geom_path(size = 0.5) +
         ylim(c(0, 1)) +
         xlim(c(0, 1)) +
-        coord_equal() +
-        theme(legend.title = element_blank(),
-              legend.key.height = unit(1.2, "lines"),
+        scale_color_discrete(name = "Level") +
+        scale_linetype_discrete(name = "Classifier") +
+        coord_equal()+
+        labs(title = title) +
+        theme(legend.key.height = unit(0.6, "lines"),
               legend.key.width = unit(0.6, "lines"),
-              legend.margin = margin(l = -0.5, unit = "lines"),
-              plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
-        ggtitle(title)
+              legend.margin = margin(l = -0.5, 
+                                     r = -0.5,
+                                     unit = "lines"))
     
     return(p)
 }
@@ -122,75 +158,107 @@ plotCurve <- function(dat, type = "ROC", title = NULL) {
 #### Import baseline classifier results  
 ```{r importBaselineResults}
 sfRes <- readRDS("../temp/sfRes.rds")
-nnRes <- readRDS("../temp/nnRes.rds")
+sfCurveStat <- readRDS("../temp/sfCurveStat.rds") %>%
+    mutate(classifier = "Single Feature")
 ```
 
 #### Function to Format ROC and PR results
 ```{r formatCurveResults}
-combineResults <- function(mlResults, sfResults, nnResults, type = "species") {
+combineResults <- function(mlResults, 
+                           sfResults, 
+                           type = "species") {
     ml <- as.tibble(mlResults[[type]]$curve) %>% mutate(classifier = "XGBoost")
     sf <- as.tibble(sfResults[[type]]$curve) %>% mutate(classifier = "Single Feature")
-    nn <- as.tibble(nnResults[[type]]$curve) %>% mutate(classifier = "Nearest Neighbor")
     
-    ml %>% rbind(sf) %>% rbind(nn)
+    r <-  ml %>% rbind(sf) %>% 
+        mutate(type = type,
+               Level = ifelse(type == "pos", "Resistance", "Species"))
+    
+    return(r)
 }
 ```
 
 
 #### Acinetobacter ROC & PR Curves
 ```{r plotAb}
-abTitleSpec <- expression(italic("A. baumannii")~"(Species)")
-abTitleRes <- expression(italic("A. baumannii")~"(Resistance)")
+abTitle <- expression(italic("A. baumannii"))
 
-# Species ROC
-abSpecRoc <- combineResults(abRoc, sfRes$sfAbRoc, nnRes$nnAbRoc, type = "species")
-plotCurve(abSpecRoc, type = "ROC", title = abTitleSpec)
-ggsave("../results/AbSpecRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+abFullRoc <- combineResults(abRoc, sfRes$sfAbRoc, type = "species") %>%
+    full_join(combineResults(abRoc, sfRes$sfAbRoc, type = "pos"))
+plotCurve(abFullRoc, type = "ROC", title = abTitle)
+ggsave("../results/AbRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
-# Resistance ROC
-abPosRoc <- combineResults(abRoc, sfRes$sfAbRoc, nnRes$nnAbRoc, type = "pos")
-plotCurve(abPosRoc, type = "ROC", title = abTitleRes)
-ggsave("../results/AbResRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
-
-# Species PR
-abSpecPr <- combineResults(abPr, sfRes$sfAbPr, nnRes$nnAbPr, type = "species")
-plotCurve(abSpecPr, type = "PR", title = abTitleSpec)
-ggsave("../results/AbSpecPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
-
-# Resistance PR
-abPosPr <- combineResults(abPr, sfRes$sfAbPr, nnRes$nnAbPr, type = "pos")
-plotCurve(abPosPr, type = "PR", title = abTitleRes)
-ggsave("../results/AbResPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+abFullPr <- combineResults(abPr, sfRes$sfAbPr, type = "species") %>%
+    full_join(combineResults(abPr, sfRes$sfAbPr, type = "pos"))
+plotCurve(abFullPr, type = "PR", title = abTitle)
+ggsave("../results/AbPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 ```
 
 #### Klebsiella ROC & PR Curves
 ```{r plotKp}
-kpTitleSpec <- expression(italic("K. pneumoniae")~"(Species)")
-kpTitleRes <- expression(italic("K. pneumoniae")~"(Resistance)")
+kpTitle <- expression(italic("K. pneumoniae"))
 
-# Species ROC
-kpSpecRoc <- combineResults(kpRoc, sfRes$sfKpRoc, nnRes$nnKpRoc, type = "species")
-plotCurve(kpSpecRoc, type = "ROC", title = kpTitleSpec)
-ggsave("../results/KpSpecRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+kpFullRoc <- combineResults(kpRoc, sfRes$sfKpRoc, type = "species") %>%
+    full_join(combineResults(kpRoc, sfRes$sfKpRoc, type = "pos"))
+plotCurve(kpFullRoc, type = "ROC", title = kpTitle)
+ggsave("../results/KpRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
-# Resistance ROC
-kpPosRoc <- combineResults(kpRoc, sfRes$sfKpRoc, nnRes$nnKpRoc, type = "pos")
-plotCurve(kpPosRoc, type = "ROC", title = kpTitleRes)
-ggsave("../results/KpResRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 # Species PR
-kpSpecPr <- combineResults(kpPr, sfRes$sfKpPr, nnRes$nnKpPr, type = "species")
-plotCurve(kpSpecPr, type = "PR", title = kpTitleSpec)
-ggsave("../results/KpSpecPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+kpFullPr <- combineResults(kpPr, sfRes$sfKpPr, type = "species") %>%
+    full_join(combineResults(kpPr, sfRes$sfKpPr, type = "pos"))
+plotCurve(kpFullPr, type = "PR", title = kpTitle)
+ggsave("../results/KpPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
-# Resistance PR
-kpPosPr <- combineResults(kpPr, sfRes$sfKpPr, nnRes$nnKpPr, type = "pos")
-plotCurve(kpPosPr, type = "PR", title = kpTitleRes)
-ggsave("../results/KpResPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+```
+
+### Plot Curve Stats
+```{r curveStatsRCool}
+curveStatPlot <- curveStat %>%
+    full_join(sfCurveStat) %>%
+    ungroup() %>%
+    mutate(org = ifelse(org == "Ab", "A. baumannii", "K. pneumoniae"),
+           level = ifelse(level == "Res", "Resistance", "Species"),
+           classifier = str_replace(classifier, " ", "\n"))
+
+curveStatPlot %>%
+    filter(org == "A. baumannii")  %>%
+    ggplot(aes(x = fct_rev(classifier), y = avg_AUC, fill = fct_rev(level),
+               ymin = ci_low, ymax = ci_high)) +
+    geom_col(color = "black", position = dodge) +
+    geom_errorbar(position = dodge, width = 0.25) +
+    facet_wrap(~fct_rev(type), nrow = 1) +
+    ylab("Area Under the Curve") +
+    xlab("Classifier") +
+    scale_fill_discrete(name = "Level") +
+    theme(legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(l = -0.5, 
+                                 r = -0.2)) +
+    ggtitle(expression(italic("A. baumannii")))
+
+ggsave("../results/abCurveSummary.pdf", width = 105, height = 50, units = "mm", useDingbats = F)
+
+curveStatPlot %>%
+    filter(org == "K. pneumoniae")  %>%
+    ggplot(aes(x = fct_rev(classifier), y = avg_AUC, fill = fct_rev(level),
+               ymin = ci_low, ymax = ci_high)) +
+    geom_col(color = "black", position = dodge) +
+    geom_errorbar(position = dodge, width = 0.25) +
+    facet_wrap(~fct_rev(type), nrow = 1) +
+    ylab("Area Under the Curve") +
+    xlab("Classifier") +
+    scale_fill_discrete(name = "Level") +
+    theme(legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(l = -0.5, 
+                                 r = -0.2,
+                                 unit = "lines")) +
+    ggtitle(expression(italic("K. pneumoniae")))
+
+ggsave("../results/kpCurveSummary.pdf", width = 105, height = 50, units = "mm", useDingbats = F)
 ```
 
 
-## New Confusion Matrices
+## Select 97% Sensitivity Threshold
 ```{r confusionMats, results='markup'}
 pickThold <- function(curve, minSens) {
     dat <- as.data.frame(curve$curve)
@@ -201,10 +269,15 @@ pickThold <- function(curve, minSens) {
     return(dat)
 } 
 
+# For XGBoost Classifiers
 thold <- tibble(type = c("Ab_species", "Ab_resistant","Kp_species", "Kp_resistant"),
-                curves = list(abSpeciesROC, abPosROC, kpSpeciesROC, kpPosROC)) %>%
+                curves = list(abRoc$species, 
+                              abRoc$pos,
+                              kpRoc$species, 
+                              kpRoc$pos)) %>%
     group_by(type) %>%
-    do(pickThold(curve = .$curves[[1]], 0.97))
+    do(pickThold(curve = .$curves[[1]], 0.97)) %>%
+    mutate(classifier = "XGBoost")
 
 abRes2 <- abRes %>% 
     mutate(posPred = ifelse(pos >= thold$threshold[thold$type == "Ab_resistant"],
@@ -213,14 +286,6 @@ abRes2 <- abRes %>%
            specPred = ifelse(speciesVsOther >= thold$threshold[thold$type == "Ab_species"],
                               "Ab", "other"),
            specTruth = ifelse(truth != "other", "Ab", "other"))
-
-# Ab Species
-confusionMatrix(data = abRes2$specPred, reference = abRes2$specTruth, 
-                positive = "Ab", mode = "everything")
-
-# Colistin-Resistant Ab
-confusionMatrix(data = abRes2$posPred, reference = abRes2$posTruth, 
-                positive = "pos", mode = "everything")
 
 
 kpRes2 <- kpRes %>%
@@ -231,16 +296,161 @@ kpRes2 <- kpRes %>%
                              "Kp", "other"),
            specTruth = ifelse(truth != "other", "Kp", "other"))
 
-# Kp Species
-confusionMatrix(data = kpRes2$specPred, reference = kpRes2$specTruth, 
-                positive = "Kp", mode = "everything")
 
-# Colistin-Resistant Kp
-confusionMatrix(data = kpRes2$posPred, reference = kpRes2$posTruth, 
-                positive = "pos", mode = "everything")
+# For sf Classifiers
+sfthold <- tibble(type = c("Ab_species", "Ab_resistant","Kp_species", "Kp_resistant"),
+                  curves = list(sfRes$sfAbRoc$species, 
+                                sfRes$sfAbRoc$pos,
+                                sfRes$sfKpRoc$species, 
+                                sfRes$sfKpRoc$pos)) %>%
+    group_by(type) %>%
+    do(pickThold(curve = .$curves[[1]], 0.97)) %>%
+    mutate(classifier = "Single\nFeature")
 
+
+# plot for 97% Sensitivity
+ratePlot <- thold %>%
+    full_join(sfthold) %>%
+    mutate(FNR = 1 - TPR,
+           TNR = 1 - FPR) %>%
+    gather(metric, value, FNR, TNR, FPR, TPR) %>%
+    mutate(metricType = ifelse(metric %in% c("TPR", "FNR"), "Postives", "Negatives"),
+           fills = ifelse(str_detect(metric, "T"), "good", "bad"),
+           org = ifelse(str_detect(type, "Ab_"), "A. baumannii", "K. pneumoniae"),
+           Level = ifelse(str_detect(type, "_resistant"), "Resistance", "Species"),
+           metric = parse_factor(metric, c("TPR", "FNR", "TNR", "FPR")))
+
+
+ratePlot %>%
+    filter(metric == "FPR") %>%
+    ggplot(aes(x = fct_rev(classifier), y = value, fill = Level)) +
+    geom_col(color = "black", position = "dodge") +
+    facet_wrap(~org, nrow = 1) +
+    xlab("Classifier") +
+    ylab("False Positive Rate (FPR)") +
+    theme(legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(l = -0.5, 
+                                 r = -0.2,
+                                 unit = "lines"),
+          panel.spacing = unit(0, "lines"))
+    
+ggsave("../results/FPR.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+
+
+ratePlot %>%
+    filter(org == "A. baumannii",
+           metric %in% c("TNR", "FPR")) %>%
+    ggplot(aes(x = fct_rev(classifier), y = value, fill = fct_rev(metric))) + 
+    geom_col(color = "black") +
+    facet_wrap(~fct_rev(Level)) +
+    scale_fill_discrete(name = "Metric") +
+    theme(legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(l = -0.5, 
+                                 r = -0.2,
+                                 unit = "lines"),
+          axis.title.y = element_blank()) +
+    ggtitle(expression(italic("A. baumannii"))) +
+    xlab("Classifier")
+
+ggsave("../results/abFPR.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
+
+ratePlot %>%
+    filter(org == "K. pneumoniae",
+           metric %in% c("TNR", "FPR")) %>%
+    ggplot(aes(x = fct_rev(classifier), y = value, fill = fct_rev(metric))) + 
+    geom_col(color = "black") +
+    facet_wrap(~fct_rev(Level)) +
+    scale_fill_discrete(name = "Metric") +
+    theme(legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(l = -0.5, 
+                                 r = -0.2,
+                                 unit = "lines"),
+          axis.title.y = element_blank()) +
+    ggtitle(expression(italic("K. pneumoniae"))) +
+    xlab("Classifier")
+
+ggsave("../results/kpFPR.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 ```
+
+## Performance at 97% Sensitivity
+```{r isolatePerformance}
+calcIsoStats <- function(resDf, species, level) {
+    
+    if(level == "species") {
+        cm <- confusionMatrix(data = resDf$specPred, 
+                              reference = resDf$specTruth, 
+                              positive = species, mode = "everything")
+        
+        
+    } else if(level == "res") {
+        cm <- confusionMatrix(data = resDf$posPred, 
+                              reference = resDf$posTruth, 
+                              positive = "pos", mode = "everything")
+    }
+    
+    ret <- as.tibble(as.list(c(cm$overall, cm$byClass)))
+    ret$orgResults <- species
+    ret$level <- level
+    
+    ret <- select(ret, level, orgResults, Accuracy,
+                  Sensitivity, Specificity, Precision)
+    
+    return(ret)
+}
+
+abSpecStats <- abRes2 %>%
+    bootstrap(nboot) %>%
+    do(calcIsoStats(., "Ab", "species"))
+
+abResStats <- abRes2 %>%
+    bootstrap(nboot) %>%
+    do(calcIsoStats(., "Ab", "res"))
+
+kpSpecStats <- kpRes2 %>%
+    bootstrap(nboot) %>%
+    do(calcIsoStats(., "Kp", "species"))
+
+kpResStats <- kpRes2 %>%
+    bootstrap(nboot) %>%
+    do(calcIsoStats(., "Kp", "res"))
+
+statOrder <- c("Accuracy", "Sensitivity", "Specificity", "Precision")
+
+isoStats <- abSpecStats %>%
+    full_join(abResStats) %>%
+    full_join(kpSpecStats) %>%
+    full_join(kpResStats) %>%
+    gather(statistic, value, -level, -orgResults, -replicate) %>%
+    group_by(level, orgResults, statistic) %>%
+    summarize(avg = mean(value),
+              ci_low = quantile(value, 0.05 / 2),
+              ci_high = quantile(value, 1 - 0.05 / 2)) %>%
+    ungroup() %>%
+    mutate(statistic = fct_relevel(statistic, statOrder),
+           species = str_replace(orgResults, "Ab", "A. baumannii"),
+           species = str_replace(species, "Kp", "K. pneumoniae"),
+           level = str_replace(level, "res", "Resistance"),
+           level = str_replace(level, "species", "Species"),
+           level = fct_rev(as.factor(level)))
+
+isoStats %>%
+    ggplot(aes(x = statistic, y = avg, 
+               ymax = ci_high, ymin = ci_low, fill = level)) +
+    geom_col(color = "black", position = dodge) +
+    geom_errorbar(position = dodge, width = 0.25) +
+    scale_fill_discrete(name = "Level") +
+    facet_wrap(~species, ncol = 1) +
+    theme(axis.title.y = element_blank(),
+          axis.title.x = element_blank(),
+          legend.key.size = unit(0.5, "lines"),
+          legend.margin = margin(l = -0.5, 
+                                 r = -0.2,
+                                 unit = "lines"))
+
+ggsave("../results/isoStats.pdf", width = 140, height = 100, units = "mm", useDingbats = F)
+```
+
 
 ## Variable Importance
 ```{r varImp}
@@ -250,22 +460,30 @@ vImpAb <- xgb.importance(colnames(testdmatList$Ab$dat), model = abMod) %>%
 vImpKp <- xgb.importance(colnames(testdmatList$Kp$dat), model = kpMod) %>%
     mutate(org = "Kp")
 
-basePeaks <- c("1912.5448", # Ab
-               "1841.4497", # Kp
-               "1826.3531",
-               "2080.3158")
-resPeaks <- c("2036.4927", # Ab
-              "1957.0536",
-              "1957.1088", # Kp
-              "1973.1961",
-              "1895.7716")
+abFeats <- str_replace(vImpAb$Feature, "mz", "")
+kpFeats <- str_replace(vImpKp$Feature, "mz", "")
+
+basePeaks <- c(nom2feat(1910, abFeats), # Ab
+               nom2feat(1894, abFeats),
+               nom2feat(1882, abFeats),
+               nom2feat(1840, kpFeats), # Kp
+               nom2feat(1824, kpFeats),
+               nom2feat(2063, kpFeats),
+               nom2feat(2079, kpFeats))
+
+resPeaks <- c(nom2feat(2033, abFeats), # Ab
+              nom2feat(2005, abFeats),
+              nom2feat(1955, kpFeats), # Kp
+              nom2feat(1971, kpFeats))#,
+              #nom2feat(1895, kpFeats))
 
 vImp <- vImpAb %>%
     full_join(vImpKp) %>%
     mutate(featureMz = as.factor(str_replace(Feature, "mz", "")),
            featureMz = fct_reorder(featureMz, Gain, .desc = T),
-           color = ifelse(featureMz %in% basePeaks, "Base Lipid A Structure", NA),
-           color = ifelse(featureMz %in% resPeaks, "Resistance Lipid A Structure", color)) %>%
+           color = ifelse(featureMz %in% basePeaks, "Published Base Lipid A Structure", NA),
+           color = ifelse(featureMz %in% resPeaks, 
+                          "Published Resistance Lipid A Structure", color)) %>%
     group_by(org) %>%
     arrange(desc(Gain)) %>%
     filter(Gain >= Gain[20])
@@ -420,7 +638,7 @@ mixedCurveDat <- mixedCurves %>%
     unnest(curveDf) %>%
     rename("Rec_Spec" = V1, "Prec_Sens" = V2, "Threshold" = V3) %>%
     mutate(PrOrRoc = ifelse(str_detect(curveType, "pr"), "PR", "ROC"),
-           type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", "Species"), #type),
+           type = ifelse(str_detect(curveType, "Pos"), "Resistance", "Species"), #type),
            type = as.factor(type))
 
 mixedCurveDat %>%
@@ -465,28 +683,33 @@ ggsave("../results/mixtureROCCurves.pdf", width = 70, height = 80, units = "mm",
 
 ### Plot the AUC of PR and ROC Curves With Increasing Matrix Complexity  
 ```{r simAuc}
+mixedCurveStats <- mixedKpRes %>%
+    full_join(mixedAbRes) %>%
+    nest(-n, -orgResults) %>%
+    mutate(AUC = map(data, ~ bootstrap(., nboot) %>% do(calcAUC(.)))) %>%
+    unnest(AUC) %>%
+    group_by(n, orgResults, type, level) %>%
+    summarize(avg_AUC = mean(AUC),
+              ci_low = quantile(AUC, 0.05 / 2),
+              ci_high = quantile(AUC, 1 - 0.05 / 2)) %>%
+    mutate(level = str_replace(level, "Res", "Resistance"))
+    
+
+
 labOrder <- c("Species", 
-              "Colistin-Resistant")
+              "Resistance")
 
-mixedCurvesAUC <- mixedCurves %>%
-    select(ends_with("AUC"), n, orgResults) %>%
-    gather(curveType, AUC, -n, -orgResults) %>%
-    mutate(PrOrRoc = ifelse(str_detect(curveType, "pr"), "PR", "ROC"),
-           type = ifelse(str_detect(curveType, "Neg"), "Colistin-Susceptible", "Species"),
-           type = ifelse(str_detect(curveType, "Pos"), "Colistin-Resistant", type),
-           type = fct_relevel(as.factor(type), labOrder))
-
-mixedCurvesAUC %>%
-    filter(n != "Otherwise") %>%
-    ggplot(aes(x = as.numeric(n), y = AUC, color = type)) +
+mixedCurveStats %>%
+    ggplot(aes(x = as.numeric(n), y = avg_AUC, color = fct_rev(level))) +
     geom_line() +
     geom_point() + 
+    geom_errorbar(aes(ymax = ci_high, ymin = ci_low), width = 0.25) +
     xlab("Number of Species in Mixture") +
     ylab("Area Under the Curve") +
     ylim(c(0, 1)) +
     coord_fixed(ratio = 4) +
-    scale_color_discrete(name = NULL) +
-    facet_grid(fct_rev(PrOrRoc) ~ orgResults) +
+    scale_color_discrete(name = "Level") +
+    facet_grid(fct_rev(type) ~ orgResults) +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
           legend.position = "bottom")
@@ -509,7 +732,7 @@ mixedThold <- mixedCurveDat %>%
 mixedThold # 97% Sensitivity Thresholds for Simulated Mixtures
 
 mixedAbRes <- mixedAbRes %>%
-    mutate(posPred = ifelse(pos >= mixedThold$threshold[mixedThold$type == "Ab_resistant"],
+    mutate(posPred = ifelse(pos >= mixedThold$threshold[mixedThold$type == "Ab_resistance"],
                             "pos", "neg"),
            posTruth = ifelse(truth == "pos", "pos", "neg"),
            specPred = ifelse(speciesVsOther >= mixedThold$threshold[mixedThold$type == "Ab_species"],
@@ -518,7 +741,7 @@ mixedAbRes <- mixedAbRes %>%
 
 
 mixedKpRes <- mixedKpRes %>%
-    mutate(posPred = ifelse(pos >= mixedThold$threshold[mixedThold$type == "Kp_resistant"],
+    mutate(posPred = ifelse(pos >= mixedThold$threshold[mixedThold$type == "Kp_resistance"],
                             "pos", "neg"),
            posTruth = ifelse(truth == "pos", "pos", "neg"),
            specPred = ifelse(speciesVsOther >= mixedThold$threshold[mixedThold$type == "Kp_species"],
@@ -545,14 +768,31 @@ specStats <- function(resDf, posClass) {
     
     ret <- select(ret, orgResults, n, Accuracy,
                   Sensitivity, Specificity, Precision)
+
     
     return(ret)
 }
 
 # Species Stats
-mixedSpecStats <- specStats(mixedAbRes, "Ab") %>%
-    full_join(specStats(mixedKpRes, "Kp"))
-mixedSpecStats
+mixedAbSpecStats <- mixedAbRes %>%
+    bootstrap(nboot) %>%
+    do(specStats(., "Ab"))
+
+mixedKpSpecStats <- mixedKpRes %>%
+    bootstrap(nboot) %>%
+    do(specStats(., "Kp"))
+
+mixedSpecStats <- mixedAbSpecStats %>%
+    full_join(mixedKpSpecStats) %>%
+    gather(statistic, value, -orgResults, -n, -replicate) %>%
+    group_by(orgResults, n, statistic) %>%
+    summarize(avg = mean(value),
+              ci_low = quantile(value, 0.05 / 2),
+              ci_high = quantile(value, 1 - 0.05 / 2))
+
+
+
+
 
 # Function to calculate Resistance Stats
 resStats <- function(resDf, posClass = "pos") {
@@ -579,19 +819,30 @@ resStats <- function(resDf, posClass = "pos") {
 }
 
 # Resistance Stats
-mixedResStats <- resStats(mixedAbRes) %>%
-    full_join(resStats(mixedKpRes))
+mixedAbResStats <- mixedAbRes %>%
+    bootstrap(nboot) %>%
+    do(resStats(.))
 
-mixedResStats
+mixedKpResStats <- mixedKpRes %>%
+    bootstrap(nboot) %>%
+    do(resStats(.))
+
+mixedResStats <- mixedAbResStats %>%
+    full_join(mixedKpResStats) %>%
+    gather(statistic, value, -orgResults, -n, -replicate) %>%
+    group_by(orgResults, n, statistic) %>%
+    summarize(avg = mean(value),
+              ci_low = quantile(value, 0.05 / 2),
+              ci_high = quantile(value, 1 - 0.05 / 2))
 
 ```
 
 ### Plot statistics from simulated mixtures
 ```{r mixedStatisticsPlots}
 mixedSpecStats %>%
-    gather(statistic, value, -orgResults, -n) %>%
-    ggplot(aes(x = n, y = value)) +
-    geom_col(position = "dodge") +
+    ggplot(aes(x = n, y = avg, ymax = ci_high, ymin = ci_low)) +
+    geom_col(position = "dodge", color = "black") +
+    geom_errorbar(width = 0.25) +
     facet_grid(orgResults ~ statistic) +
     ylab("Value") +
     xlab("Number of Species in Mixture") +
@@ -600,9 +851,9 @@ mixedSpecStats %>%
 ggsave("../results/simSpecStats.pdf", width = 210, height = 80, units = "mm", useDingbats = F)
 
 mixedResStats %>%
-    gather(statistic, value, -orgResults, -n) %>%
-    ggplot(aes(x = n, y = value)) +
-    geom_col(position = "dodge") +
+    ggplot(aes(x = n, y = avg, ymax = ci_high, ymin = ci_low)) +
+    geom_col(position = "dodge", color = "black") +
+    geom_errorbar(width = 0.25) +
     facet_grid(orgResults ~ statistic) +
     ylab("Value") +
     xlab("Number of Species in Mixture") +
@@ -647,7 +898,23 @@ twoKpRes <- formatResults(kpMod, twoSpeciesDmatList$Kp) %>%
 twoRes <- twoAbRes %>% 
     full_join(twoKpRes) %>%
     mutate(Colistin = fct_rev(as.factor(Colistin))) %>%
-    filter(!(truth == "other" & percentEc != 100))
+    filter(!(truth == "other" & percentEc != 100)) %>%
+    group_by(Colistin, percentTarget, orgResults) %>%
+    mutate(avg_speciesVsOther = mean(log10(speciesVsOther)),
+           avg_pos = mean(log10(pos)),
+           ci_lo_speciesVsOther = t.test(log10(speciesVsOther))$conf.int[1],
+           ci_hi_speciesVsOther = t.test(log10(speciesVsOther))$conf.int[2],
+           ci_lo_pos = t.test(log10(pos))$conf.int[1],
+           ci_hi_pos = t.test(log10(pos))$conf.int[2])
+
+twoResSumm <- twoRes %>%
+    group_by(Colistin, percentTarget, orgResults) %>%
+    summarize(avg_speciesVsOther = mean(log10(speciesVsOther)),
+              avg_pos = mean(log10(pos)),
+              ci_lo_speciesVsOther = t.test(log10(speciesVsOther))$conf.int[1],
+              ci_hi_speciesVsOther = t.test(log10(speciesVsOther))$conf.int[2],
+              ci_lo_pos = t.test(log10(pos))$conf.int[1],
+              ci_hi_pos = t.test(log10(pos))$conf.int[2])
 
 saveRDS(twoAbRes, file = "../temp/twoAbRes.rds")
 saveRDS(twoKpRes, file = "../temp/twoKpRes.rds")
@@ -659,18 +926,25 @@ tholdSpecies <- mixedThold %>%
     filter(str_detect(type, "species"))
 
 twoRes %>%
-    ggplot(aes(x = as.factor(percentTarget), y = log10(speciesVsOther), fill = Colistin)) +
-    #geom_hline(data = tholdSpecies, aes(yintercept = threshold), 
-    #           size = 1, linetype = "dashed") +
-    geom_jitter(width = 0.25, shape = 21) +
+    ggplot(aes(x = as.factor(percentTarget), y = log10(speciesVsOther),
+               fill = Colistin, group = Colistin)) +
+    geom_errorbar(aes(ymax = ci_hi_speciesVsOther, 
+                      ymin = ci_lo_speciesVsOther, 
+                      color = Colistin), 
+                  width = 0.25, position = dodge) +
+    geom_crossbar(aes(ymax = avg_speciesVsOther, ymin = avg_speciesVsOther, 
+                      y = avg_speciesVsOther, color = Colistin),
+                  width = 0.5, fatten = 1, 
+                  position = dodge, show.legend = F) +
+    geom_point(width = 0.25, shape = 21, position = position_jitterdodge()) +
     facet_wrap(~orgResults, ncol = 2) +
     scale_fill_discrete(breaks = c("resistant", "susceptible")) +
+    scale_color_discrete(guide = "none") +
     xlab("Percent Target Species by Volume") +
-    ylab("Species log(Score)") +
+    ylab("Colistin Resistance log(Score)") +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
-          legend.position = "bottom") #+
-    #ylim(c(0, 1))
+          legend.position = "bottom")
 
 ggsave("../results/twoSpeciesSpecRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)
 
@@ -679,17 +953,23 @@ tholdRes <- mixedThold %>%
     filter(str_detect(type, "res"))
 
 twoRes %>%
-    ggplot(aes(x = as.factor(percentTarget), y = log10(pos), fill = Colistin)) +
-    #geom_hline(data = tholdRes, aes(yintercept = log10(threshold)), 
-    #           size = 1, linetype = "dashed") +
-    geom_jitter(width = 0.25, shape = 21) +
+    ggplot(aes(x = as.factor(percentTarget), y = log10(pos), 
+               fill = Colistin, group = Colistin)) +
+    geom_errorbar(aes(ymax = ci_hi_pos, ymin = ci_lo_pos, color = Colistin), 
+                  width = 0.25, position = dodge) +
+    geom_crossbar(aes(ymax = avg_pos, ymin = avg_pos, 
+                      y = avg_pos, color = Colistin),
+                  width = 0.5, fatten = 1, 
+                  position = dodge, show.legend = F) +
+    geom_point(width = 0.25, shape = 21, position = position_jitterdodge()) +
     facet_wrap(~orgResults, ncol = 2) +
     scale_fill_discrete(breaks = c("resistant", "susceptible")) +
+    scale_color_discrete(guide = "none") +
     xlab("Percent Target Species by Volume") +
     ylab("Colistin Resistance log(Score)") +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
-          legend.position = "bottom") #+
+          legend.position = "bottom")
     #ylim(c(0, 1))
 
 ggsave("../results/twoSpeciesResRes.pdf", width = 105, height = 60, units = "mm", useDingbats = F)

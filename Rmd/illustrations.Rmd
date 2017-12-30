@@ -48,7 +48,7 @@ featFiles <- c(list.files("../data/fullLib/Acinetobacter baumannii - res",
                     pattern = "mzXML$",
                     recursive = T)[1])
 
-spec <- preProcessSpec(featFiles, hws = 80)
+spec <- unlist(map(featFiles, preProcessSpec, hws = 80))
 
 specDat <- map_df(spec, extractSpectra) %>%
     mutate(class = str_replace(type, "Acinetobacter", "A."),
@@ -155,7 +155,7 @@ files <- list.files("../data/fullLib",
 
 files <- map_chr(soi, ~files[str_detect(files, .)])
 
-spec <- preProcessSpec(files, hws = 80)
+spec <- unlist(map(files, preProcessSpec, hws = 80))
 
 specDat <- map_df(spec, extractSpectra) 
 

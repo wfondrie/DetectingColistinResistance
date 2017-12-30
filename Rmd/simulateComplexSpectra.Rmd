@@ -12,7 +12,7 @@ knitr::opts_chunk$set(warning = FALSE,
 ```
 
 # Introduction 
-This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~25 Gb of RAM to execute. The machine this was run on had 64 Gb of RAM and 2x AMD Opteron 6272 processors (2.10 GHz).  
+This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~25 Gb of RAM to execute.  
 
 # Load Libraries & Prepare Workspace
 ```{r loadLibraries}
@@ -29,28 +29,69 @@ source("../R/extract.R")
 source("../R/ggplotTheme.R")
 source("../R/createNewFeatureTbl.R")
 
-set.seed(6578548)
+set.seed(657854)
 tic()
 
 featTol <- readRDS("../temp/mzTol.rds") # load feature extraction tolerance
 ```
 
 # Retrieve File Information  
-```{r importSpectra}
+## Select files
+```{r listFiles}
 files <- list.files("../data/fullLib", 
                     full.names = T, 
                     pattern = "mzXML$",
                     recursive = T)
-#files <- sample(files, 50)
 
-specInfo <- tibble(fname = files) %>%
+
+specList <- unlist(map(files, preProcessSpec, hws = 80)) # Same preprocessing
+
+spec <- map_df(specList, extractSpectra)
+
+spec <- spec %>%
+    group_by(id) %>%
+    summarize(keep = min(mz) <= 1100 & max(mz) >= 2100) %>%
+    filter(keep) %>%
+    left_join(spec) %>%
+    select(-keep)
+
+fileDf <- tibble(fname = files) %>%
+    mutate(id = str_match(fname, "([^\\\\^/]+).mzXML$")[ , 2]) %>%
+    filter(id %in% unique(spec$id))
+
+rm(specList)
+rm(spec)
+```
+
+## Import Spectra
+```{r importSpectra}
+# list of features, created in rmd/modelTraining.rmd
+features <- readRDS("../temp/features.rds")
+
+specList <- unlist(map(fileDf$fname, preProcessSpec, hws = 80)) # Same preprocessing
+
+spec <- map_df(specList, extractSpectra)
+
+# Free some memory
+rm(specList)
+```
+
+## Summarize Metadata
+```{r SummarizeMetaData}
+# fileDf <- tibble(fname = files) %>%
+#     mutate(id = str_match(fname, "([^\\\\^/]+).mzXML$")[ , 2])
+
+specInfo <- fileDf %>%
     mutate(type = str_match(fname, "([^\\^/]+)[\\/][^\\^/]+mzXML$")[ , 2],
-           id = str_match(fname, "([^\\^/]+).mzXML$")[ , 2],
            species = str_match(type, "^[^ ]+ [^ ]+")[ , 1],
-           Ab = ifelse(str_detect(type, "Acinetobacter baumannii - res"), "pos", "other"),
-           Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), "pos", "other"),
-           Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), "neg", Ab)),
-           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), "neg", Kp)))
+           Ab = ifelse(str_detect(type, "Acinetobacter baumannii - res"), 
+                       "pos", "other"),
+           Kp = ifelse(str_detect(type, "Klebsiella pneumoniae - res"), 
+                       "pos", "other"),
+           Ab = as.factor(ifelse(str_detect(type, "Acinetobacter baumannii - sen"), 
+                                 "neg", Ab)),
+           Kp = as.factor(ifelse(str_detect(type, "Klebsiella pneumoniae - sen"), 
+                                 "neg", Kp)))
 
 summary(specInfo)
 
@@ -122,25 +163,6 @@ comboSummary %>%
 
 # Create Complex Spectra from Selections And Extract Features  
 ```{r createSpectra}
-# list of features, created in rmd/modelTraining.rmd
-features <- readRDS("../temp/features.rds")
-
-specList <- preProcessSpec(files, hws = 80) # Same preprocessing
-
-# for debugging
-#save(specList, file = "../temp/specList.rda")
-#load("../temp/specList.rda")
-
-# rm files that contain multiple spectra
-multiSpecIdx <- map_lgl(specList, ~ metaData(.)$num > 1)
-specList <- specList[!multiSpecIdx]
-
-spec <- map_df(specList, extractSpectra)
-
-# Free some memory
-rm(specList)
-gc()
-
 simSpectra <- function(df, specDat) {
     gc()
     
@@ -158,7 +180,7 @@ simSpectra <- function(df, specDat) {
     
 }
 
-combosSmall <- combos %>% filter(str_detect(spec_id, "_[0-5]$"))
+gc()
 
 # Takes ~30 min
 comboSpec <- combos %>% 
@@ -175,7 +197,8 @@ createMixtureFeatureTbl <- function(trainList, specDf, summaryDat, mzTol) {
     suffix <- if(str_detect(trainList$regex, "Acineto")) "_Ab" else "_Kp"
     
     # extract specified features
-    cat(paste0("Creating features for ", suffix, "...\n"))
+    cat(paste0("\nCreating features for ", suffix, "...\n"))
+    
     feattbl <- specDf %>%
       group_by(id) %>%
       do(extractFeatures(., featureVec = trainList$features, tol = mzTol))
@@ -199,6 +222,7 @@ mixtureDatList <- map(trainIdx,createMixtureFeatureTbl,
                       summaryDat = comboSummary,
                       mzTol = featTol)
 
+
 saveRDS(mixtureDatList, file = "../temp/mixtureDatList.rds")
 ```
 
@@ -210,6 +234,4 @@ cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))
 
 session_info()
 ```
-
-
 
