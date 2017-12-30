@@ -22,7 +22,7 @@ knitr::opts_knit$set(verbose = TRUE)
 ## Introduction
 This repository contains the code and data required to reproduce the analysis presented in [*Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids*]().  
 
-**WARNING:** When attempting to reproduce this analysis, it should be noted that `Rmd/simulateCompleSpectra.Rmd` requires approximately 25 Gb of memory to execute. Additionally, the entire analysis time may take a number of hours depending on the hardware.
+**WARNING:** When attempting to reproduce this analysis, it should be noted that `Rmd/simulateCompleSpectra.Rmd` requires approximately 36 Gb of memory to execute. Additionally, the entire analysis time may take a number of hours depending on the hardware.
 
 Order of analysis (see the Rmd subdirectory for details): 
 1. [modelTraining.Rmd](Rmd/mdOutput/modelTraining.md)  
