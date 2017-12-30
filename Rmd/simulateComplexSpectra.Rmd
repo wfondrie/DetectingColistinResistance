@@ -12,7 +12,7 @@ knitr::opts_chunk$set(warning = FALSE,
 ```
 
 # Introduction 
-This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~25 Gb of RAM to execute.  
+This file contains the code to simulate glycolipid MALDI-TOF mass spectra of organism mixtures using linear combinations of the real glycolipid mass spectra in our library. **Warning**: Running this code requires a minimum of ~36 Gb of RAM to execute.  
 
 # Load Libraries & Prepare Workspace
 ```{r loadLibraries}
