@@ -32,7 +32,7 @@ Order of analysis (see the Rmd subdirectory for details):
 5. [baselineClassifiers.Rmd](Rmd/mdOutput/baselineClassifiers.md)  
 6. [makeMiscFigures.Rmd](Rmd/mdOutput/makeMiscFigures.md)  
 7. [illustrations.Rmd](Rmd/mdOutput/illustrations.md)  
-8. [makeTables.Rmd](Rmd/mdOutput/makeTables.md)
+8. [makeTables.Rmd](Rmd/mdOutput/makeTables.md)  
 
 ## Directory structure  
 To reproduce this analysis, the project directory must be structured as 
