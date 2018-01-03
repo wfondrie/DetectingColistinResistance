@@ -1,7 +1,7 @@
 Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids
 ================
 William E Fondrie,
-December 30, 2017
+January 02, 2018
 
 -   [Introduction](#introduction)
 -   [Directory structure](#directory-structure)
@@ -148,8 +148,8 @@ cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))
 session_info()
 ```
 
-    ## 16771.16 sec elapsed
-    ## Execution time: 280 min
+    ## 17743.53 sec elapsed
+    ## Execution time: 296 min
     ## 
     ##  setting  value                       
     ##  version  R version 3.4.0 (2017-04-21)
@@ -158,7 +158,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-12-30                  
+    ##  date     2018-01-02                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.3.3)

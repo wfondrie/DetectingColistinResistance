@@ -6,7 +6,7 @@ author: "William E Fondrie"
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hide")
 ```
 
-## Load Libraries & Prepare Workspace
+## Load Libraries & Prepare Workspace  
 ```{r loadLibraries, results = "hide"}
 # data manipulation
 suppressMessages(library(tidyverse, quietly = T))
@@ -40,7 +40,7 @@ nboot <- 2000 #2000
 dodge <- position_dodge(width = 0.9)
 ```
 
-## Evaluation of Model Performance on Isolate Spectra in Library
+## Evaluation of Model Performance on Isolate Spectra in Library  
 ```{r singles}
 testList <- readRDS("../temp/testDatList.rds")
 testdmatList <- prepareData(testList, orgLabs = c("Ab", "Kp"))
@@ -65,7 +65,7 @@ formatResults <- function(model, dataList) {
 
 ```
 
-### Import Acinetobacter baumannii
+### Import Acinetobacter baumannii  
 ```{r AbSingleSpec, results='markup'}
 abMod <- xgb.load(mods$Ab)
 abRes <- formatResults(abMod, testdmatList$Ab)
@@ -85,7 +85,7 @@ abCurveStat <- abRes %>%
     mutate(org = "Ab")
 ```
 
-### Import Klebsiella pneumoniae
+### Import Klebsiella pneumoniae  
 ```{r KpSingleSpec, results="markup"}
 kpMod <- xgb.load(mods$Kp)
 kpRes <- formatResults(kpMod, testdmatList$Kp)
@@ -113,14 +113,15 @@ curveStat <- abCurveStat %>%
               ci_low = quantile(AUC, 0.05 / 2),
               ci_high = quantile(AUC, 1 - 0.05 / 2)) %>%
     mutate(classifier = "XGBoost")
-    
+
+curveStat    
 ```
 
-### Plot PR and ROC Curves
-#### Plot function
+### Plot PR and ROC Curves  
+#### Plot function  
 ```{r plotFunction}
 # dat should be the ouput of PRROC::pr.curve(..., curve = T) or roc.curve(..., curve = T)
-plotCurve <- function(dat, type = "ROC", title = NULL) {
+plotCurve <- function(dat, type = "ROC", title = NULL, mar = 0.5) {
     dat <- dat %>%
         mutate(classifier = fct_rev(as.factor(classifier)),
                Level = fct_rev(as.factor(Level)))
@@ -149,20 +150,23 @@ plotCurve <- function(dat, type = "ROC", title = NULL) {
               legend.key.width = unit(0.6, "lines"),
               legend.margin = margin(l = -0.5, 
                                      r = -0.5,
-                                     unit = "lines"))
+                                     unit = "lines"),
+              plot.title = element_text(margin = margin(b = mar, unit = "lines")))
     
     return(p)
 }
 ```
 
 #### Import baseline classifier results  
-```{r importBaselineResults}
+```{r importBaselineResults, results = "markup"}
 sfRes <- readRDS("../temp/sfRes.rds")
 sfCurveStat <- readRDS("../temp/sfCurveStat.rds") %>%
     mutate(classifier = "Single Feature")
+
+sfCurveStat
 ```
 
-#### Function to Format ROC and PR results
+#### Function to Format ROC and PR results  
 ```{r formatCurveResults}
 combineResults <- function(mlResults, 
                            sfResults, 
@@ -179,7 +183,7 @@ combineResults <- function(mlResults,
 ```
 
 
-#### Acinetobacter ROC & PR Curves
+#### Acinetobacter ROC & PR Curves  
 ```{r plotAb}
 abTitle <- expression(italic("A. baumannii"))
 
@@ -194,25 +198,25 @@ plotCurve(abFullPr, type = "PR", title = abTitle)
 ggsave("../results/AbPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 ```
 
-#### Klebsiella ROC & PR Curves
+#### Klebsiella ROC & PR Curves  
 ```{r plotKp}
 kpTitle <- expression(italic("K. pneumoniae"))
 
 kpFullRoc <- combineResults(kpRoc, sfRes$sfKpRoc, type = "species") %>%
     full_join(combineResults(kpRoc, sfRes$sfKpRoc, type = "pos"))
-plotCurve(kpFullRoc, type = "ROC", title = kpTitle)
+plotCurve(kpFullRoc, type = "ROC", title = kpTitle, mar = 0)
 ggsave("../results/KpRocCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 
 # Species PR
 kpFullPr <- combineResults(kpPr, sfRes$sfKpPr, type = "species") %>%
     full_join(combineResults(kpPr, sfRes$sfKpPr, type = "pos"))
-plotCurve(kpFullPr, type = "PR", title = kpTitle)
+plotCurve(kpFullPr, type = "PR", title = kpTitle, mar = 0)
 ggsave("../results/KpPrCurve.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 
 ```
 
-### Plot Curve Stats
+### Plot Curve Stats  
 ```{r curveStatsRCool}
 curveStatPlot <- curveStat %>%
     full_join(sfCurveStat) %>%
@@ -233,7 +237,9 @@ curveStatPlot %>%
     scale_fill_discrete(name = "Level") +
     theme(legend.key.size = unit(0.5, "lines"),
           legend.margin = margin(l = -0.5, 
-                                 r = -0.2)) +
+                                 r = -0.2,
+                                 unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
     ggtitle(expression(italic("A. baumannii")))
 
 ggsave("../results/abCurveSummary.pdf", width = 105, height = 50, units = "mm", useDingbats = F)
@@ -251,14 +257,15 @@ curveStatPlot %>%
     theme(legend.key.size = unit(0.5, "lines"),
           legend.margin = margin(l = -0.5, 
                                  r = -0.2,
-                                 unit = "lines")) +
+                                 unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae")))
 
 ggsave("../results/kpCurveSummary.pdf", width = 105, height = 50, units = "mm", useDingbats = F)
 ```
 
 
-## Select 97% Sensitivity Threshold
+## Select 97% Sensitivity Threshold  
 ```{r confusionMats, results='markup'}
 pickThold <- function(curve, minSens) {
     dat <- as.data.frame(curve$curve)
@@ -348,7 +355,8 @@ ratePlot %>%
           legend.margin = margin(l = -0.5, 
                                  r = -0.2,
                                  unit = "lines"),
-          axis.title.y = element_blank()) +
+          axis.title.y = element_blank(),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
     ggtitle(expression(italic("A. baumannii"))) +
     xlab("Classifier")
 
@@ -365,7 +373,8 @@ ratePlot %>%
           legend.margin = margin(l = -0.5, 
                                  r = -0.2,
                                  unit = "lines"),
-          axis.title.y = element_blank()) +
+          axis.title.y = element_blank(),
+          plot.title = element_text(margin = margin(b = 0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae"))) +
     xlab("Classifier")
 
@@ -373,7 +382,14 @@ ggsave("../results/kpFPR.pdf", width = 70, height = 50, units = "mm", useDingbat
 
 ```
 
-## Performance at 97% Sensitivity
+### Print FPRs  
+```{r printFPR, results = "markup"}
+ratePlot %>%
+    filter(metric == "FPR")
+```
+
+
+## Performance at 97% Sensitivity  
 ```{r isolatePerformance}
 calcIsoStats <- function(resDf, species, level) {
     
@@ -451,6 +467,11 @@ isoStats %>%
 ggsave("../results/isoStats.pdf", width = 140, height = 100, units = "mm", useDingbats = F)
 ```
 
+### Performance on Isolate Spectra  
+```{r isoStatSummary, results = "markup"}
+isoStats
+```
+
 
 ## Variable Importance
 ```{r varImp}
@@ -495,7 +516,8 @@ vImp %>%
     geom_linerange(size = 0.75) +
     geom_point(size = 2, aes(color = color)) +
     xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
-    scale_color_discrete(breaks = c("Base Lipid A Structure", "Resistance Lipid A Structure")) +
+    scale_color_discrete(breaks = c("Published Base Lipid A Structure", 
+                                    "Published Resistance Lipid A Structure")) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
           legend.position = c(0.996, 0.992),
           legend.justification = c(1, 1),
@@ -517,7 +539,8 @@ vImp %>%
     geom_linerange(size = 0.75) +
     geom_point(size = 2, aes(color = color)) +
     xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
-    scale_color_discrete(breaks = c("Base Lipid A Structure", "Resistance Lipid A Structure")) +
+    scale_color_discrete(breaks = c("Published Base Lipid A Structure", 
+                                    "Published Resistance Lipid A Structure")) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
           legend.position = c(0.996, 0.992),
           legend.justification = c(1, 1),
@@ -791,6 +814,7 @@ mixedSpecStats <- mixedAbSpecStats %>%
               ci_high = quantile(value, 1 - 0.05 / 2))
 
 
+mixedSpecStats
 
 
 
@@ -835,6 +859,7 @@ mixedResStats <- mixedAbResStats %>%
               ci_low = quantile(value, 0.05 / 2),
               ci_high = quantile(value, 1 - 0.05 / 2))
 
+mixedResStats
 ```
 
 ### Plot statistics from simulated mixtures
@@ -941,7 +966,7 @@ twoRes %>%
     scale_fill_discrete(breaks = c("resistant", "susceptible")) +
     scale_color_discrete(guide = "none") +
     xlab("Percent Target Species by Volume") +
-    ylab("Colistin Resistance log(Score)") +
+    ylab("Species log(Score)") +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
           legend.position = "bottom")

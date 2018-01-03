@@ -161,7 +161,7 @@ twoSpec %>%
     ylab("Relative Intensity") +
     theme(legend.title = element_blank(),
           legend.margin = margin(l = -0.5, r = -0.2, unit = "lines"),
-          legend.key.size = unit(0.5, "lines"))
+          legend.key.width = unit(0.5, "lines"))
 
 ggsave("../results/minnesotaZoom.pdf", width = 70, height = 50, unit = "mm", useDingbats = F)
 
@@ -224,10 +224,14 @@ specInfo %>%
         axis.title.x = element_text(size = 10))
 
 ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", useDingbats = F)
-
-summary(specInfo$species)
-length(unique(specInfo$species))
 ```
+
+```{r showSummaryInfo, results = "markup"}
+summary(specInfo$species)
+cat(paste0("Number of Species: ", length(unique(specInfo$species)), "\n"))
+cat(paste0("Number of Spectra: ", nrow(specInfo), "\n"))
+```
+
 
 ## Session Info
 ```{r sessionInfo, results = "markup"}

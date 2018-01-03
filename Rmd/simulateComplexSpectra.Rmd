@@ -188,10 +188,11 @@ comboSpec <- combos %>%
     do(simSpectra(df = ., specDat = filter(spec, id %in% .$id))) %>%
     rename(id = spec_id)
 
-#saveRDS(comboSpec, "../temp/comboSpec.rds")
+```
 
+## Extract features
+```{r extractComplexFeatures}
 trainIdx <- readRDS("../temp/trainIdx.rds")
-
 
 createMixtureFeatureTbl <- function(trainList, specDf, summaryDat, mzTol) {
     suffix <- if(str_detect(trainList$regex, "Acineto")) "_Ab" else "_Kp"
@@ -225,6 +226,7 @@ mixtureDatList <- map(trainIdx,createMixtureFeatureTbl,
 
 saveRDS(mixtureDatList, file = "../temp/mixtureDatList.rds")
 ```
+
 
 # Session Information  
 ```{r SessionInfo, results = "hold"}

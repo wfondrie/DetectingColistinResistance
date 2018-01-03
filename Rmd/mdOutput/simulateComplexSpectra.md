@@ -9,6 +9,7 @@ Simulating Glycolipid MALDI-TOF-MS of Complex Samples
     -   [Summarize Metadata](#summarize-metadata)
 -   [Select Linear Combinations](#select-linear-combinations)
 -   [Create Complex Spectra from Selections And Extract Features](#create-complex-spectra-from-selections-and-extract-features)
+    -   [Extract features](#extract-features)
 -   [Session Information](#session-information)
 
 Introduction
@@ -227,11 +228,13 @@ comboSpec <- combos %>%
     group_by(spec_id) %>%
     do(simSpectra(df = ., specDat = filter(spec, id %in% .$id))) %>%
     rename(id = spec_id)
+```
 
-#saveRDS(comboSpec, "../temp/comboSpec.rds")
+Extract features
+----------------
 
+``` r
 trainIdx <- readRDS("../temp/trainIdx.rds")
-
 
 createMixtureFeatureTbl <- function(trainList, specDf, summaryDat, mzTol) {
     suffix <- if(str_detect(trainList$regex, "Acineto")) "_Ab" else "_Kp"
@@ -277,8 +280,8 @@ cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))
 session_info()
 ```
 
-    ## 10653.45 sec elapsed
-    ## Execution time: 178 min
+    ## 10723.04 sec elapsed
+    ## Execution time: 179 min
     ## 
     ##  setting  value                       
     ##  version  R version 3.4.0 (2017-04-21)
@@ -287,7 +290,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-12-30                  
+    ##  date     2018-01-02                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.3.3)

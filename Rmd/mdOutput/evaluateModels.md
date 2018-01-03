@@ -9,7 +9,9 @@ William E Fondrie
     -   [Plot PR and ROC Curves](#plot-pr-and-roc-curves)
     -   [Plot Curve Stats](#plot-curve-stats)
 -   [Select 97% Sensitivity Threshold](#select-97-sensitivity-threshold)
+    -   [Print FPRs](#print-fprs)
 -   [Performance at 97% Sensitivity](#performance-at-97-sensitivity)
+    -   [Performance on Isolate Spectra](#performance-on-isolate-spectra)
 -   [Variable Importance](#variable-importance)
 -   [Performance on Simulated Mixture Spectra](#performance-on-simulated-mixture-spectra)
     -   [Acinetobacter baumannii](#acinetobacter-baumannii)
@@ -133,7 +135,24 @@ curveStat <- abCurveStat %>%
               ci_low = quantile(AUC, 0.05 / 2),
               ci_high = quantile(AUC, 1 - 0.05 / 2)) %>%
     mutate(classifier = "XGBoost")
+
+curveStat    
 ```
+
+    ## Source: local data frame [8 x 7]
+    ## Groups: org, type [4]
+    ## 
+    ## # A tibble: 8 x 7
+    ##     org   type   level   avg_AUC    ci_low   ci_high classifier
+    ##   <chr> <fctr>  <fctr>     <dbl>     <dbl>     <dbl>      <chr>
+    ## 1    Ab     PR     Res 0.8040917 0.6831564 0.9069533    XGBoost
+    ## 2    Ab     PR Species 0.9986373 0.9965608 0.9998725    XGBoost
+    ## 3    Ab    ROC     Res 0.9742474 0.9536570 0.9905575    XGBoost
+    ## 4    Ab    ROC Species 0.9994182 0.9985615 0.9999420    XGBoost
+    ## 5    Kp     PR     Res 0.9827733 0.9631255 0.9967303    XGBoost
+    ## 6    Kp     PR Species 0.9888387 0.9690220 0.9997858    XGBoost
+    ## 7    Kp    ROC     Res 0.9979750 0.9958071 0.9995842    XGBoost
+    ## 8    Kp    ROC Species 0.9985387 0.9962585 0.9999620    XGBoost
 
 ### Plot PR and ROC Curves
 
@@ -141,7 +160,7 @@ curveStat <- abCurveStat %>%
 
 ``` r
 # dat should be the ouput of PRROC::pr.curve(..., curve = T) or roc.curve(..., curve = T)
-plotCurve <- function(dat, type = "ROC", title = NULL) {
+plotCurve <- function(dat, type = "ROC", title = NULL, mar = 0.5) {
     dat <- dat %>%
         mutate(classifier = fct_rev(as.factor(classifier)),
                Level = fct_rev(as.factor(Level)))
@@ -170,7 +189,8 @@ plotCurve <- function(dat, type = "ROC", title = NULL) {
               legend.key.width = unit(0.6, "lines"),
               legend.margin = margin(l = -0.5, 
                                      r = -0.5,
-                                     unit = "lines"))
+                                     unit = "lines"),
+              plot.title = element_text(margin = margin(b = mar, unit = "lines")))
     
     return(p)
 }
@@ -182,7 +202,24 @@ plotCurve <- function(dat, type = "ROC", title = NULL) {
 sfRes <- readRDS("../temp/sfRes.rds")
 sfCurveStat <- readRDS("../temp/sfCurveStat.rds") %>%
     mutate(classifier = "Single Feature")
+
+sfCurveStat
 ```
+
+    ## Source: local data frame [8 x 7]
+    ## Groups: org, type [4]
+    ## 
+    ## # A tibble: 8 x 7
+    ##     org   type   level   avg_AUC     ci_low   ci_high     classifier
+    ##   <chr> <fctr>  <fctr>     <dbl>      <dbl>     <dbl>          <chr>
+    ## 1    Ab     PR     Res 0.1377097 0.07224094 0.2263167 Single Feature
+    ## 2    Ab     PR Species 0.8885745 0.85123769 0.9199739 Single Feature
+    ## 3    Ab    ROC     Res 0.7287866 0.62848079 0.8205407 Single Feature
+    ## 4    Ab    ROC Species 0.9421489 0.92337676 0.9585021 Single Feature
+    ## 5    Kp     PR     Res 0.6093802 0.49565210 0.7254965 Single Feature
+    ## 6    Kp     PR Species 0.9373398 0.89200400 0.9740877 Single Feature
+    ## 7    Kp    ROC     Res 0.9534337 0.93627215 0.9687551 Single Feature
+    ## 8    Kp    ROC Species 0.9901142 0.98401603 0.9953598 Single Feature
 
 #### Function to Format ROC and PR results
 
@@ -233,7 +270,7 @@ kpTitle <- expression(italic("K. pneumoniae"))
 
 kpFullRoc <- combineResults(kpRoc, sfRes$sfKpRoc, type = "species") %>%
     full_join(combineResults(kpRoc, sfRes$sfKpRoc, type = "pos"))
-plotCurve(kpFullRoc, type = "ROC", title = kpTitle)
+plotCurve(kpFullRoc, type = "ROC", title = kpTitle, mar = 0)
 ```
 
 ``` r
@@ -246,7 +283,7 @@ kpFullPr <- combineResults(kpPr, sfRes$sfKpPr, type = "species") %>%
 ```
 
 ``` r
-plotCurve(kpFullPr, type = "PR", title = kpTitle)
+plotCurve(kpFullPr, type = "PR", title = kpTitle, mar = 0)
 ```
 
 ``` r
@@ -275,7 +312,9 @@ curveStatPlot %>%
     scale_fill_discrete(name = "Level") +
     theme(legend.key.size = unit(0.5, "lines"),
           legend.margin = margin(l = -0.5, 
-                                 r = -0.2)) +
+                                 r = -0.2,
+                                 unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
     ggtitle(expression(italic("A. baumannii")))
 ```
 
@@ -295,7 +334,8 @@ curveStatPlot %>%
     theme(legend.key.size = unit(0.5, "lines"),
           legend.margin = margin(l = -0.5, 
                                  r = -0.2,
-                                 unit = "lines")) +
+                                 unit = "lines"),
+          plot.title = element_text(margin = margin(b = 0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae")))
 ```
 
@@ -397,7 +437,8 @@ ratePlot %>%
           legend.margin = margin(l = -0.5, 
                                  r = -0.2,
                                  unit = "lines"),
-          axis.title.y = element_blank()) +
+          axis.title.y = element_blank(),
+          plot.title = element_text(margin = margin(b = 0.5, unit = "lines"))) +
     ggtitle(expression(italic("A. baumannii"))) +
     xlab("Classifier")
 ```
@@ -416,7 +457,8 @@ ratePlot %>%
           legend.margin = margin(l = -0.5, 
                                  r = -0.2,
                                  unit = "lines"),
-          axis.title.y = element_blank()) +
+          axis.title.y = element_blank(),
+          plot.title = element_text(margin = margin(b = 0, unit = "lines"))) +
     ggtitle(expression(italic("K. pneumoniae"))) +
     xlab("Classifier")
 ```
@@ -424,6 +466,30 @@ ratePlot %>%
 ``` r
 ggsave("../results/kpFPR.pdf", width = 70, height = 50, units = "mm", useDingbats = F)
 ```
+
+### Print FPRs
+
+``` r
+ratePlot %>%
+    filter(metric == "FPR")
+```
+
+    ## Source: local data frame [8 x 9]
+    ## Groups: type [4]
+    ## 
+    ## # A tibble: 8 x 9
+    ##           type   threshold        classifier metric       value
+    ##          <chr>       <dbl>             <chr> <fctr>       <dbl>
+    ## 1 Ab_resistant 0.001703996           XGBoost    FPR 0.163291139
+    ## 2   Ab_species 0.201784899           XGBoost    FPR 0.007042254
+    ## 3 Kp_resistant 0.150716931           XGBoost    FPR 0.012178620
+    ## 4   Kp_species 0.414723821           XGBoost    FPR 0.002857143
+    ## 5 Ab_resistant 0.001792086 "Single\nFeature"    FPR 0.930379747
+    ## 6   Ab_species 0.037191286 "Single\nFeature"    FPR 0.385563380
+    ## 7 Kp_resistant 0.048104094 "Single\nFeature"    FPR 0.263870095
+    ## 8   Kp_species 0.281802944 "Single\nFeature"    FPR 0.100000000
+    ## # ... with 4 more variables: metricType <chr>, fills <chr>, org <chr>,
+    ## #   Level <chr>
 
 Performance at 97% Sensitivity
 ------------------------------
@@ -507,6 +573,33 @@ isoStats %>%
 ggsave("../results/isoStats.pdf", width = 140, height = 100, units = "mm", useDingbats = F)
 ```
 
+### Performance on Isolate Spectra
+
+``` r
+isoStats
+```
+
+    ## # A tibble: 16 x 7
+    ##         level orgResults   statistic       avg    ci_low   ci_high
+    ##        <fctr>      <chr>      <fctr>     <dbl>     <dbl>     <dbl>
+    ##  1 Resistance         Ab    Accuracy 0.8412028 0.8171913 0.8656174
+    ##  2 Resistance         Ab   Precision 0.2105517 0.1491622 0.2743902
+    ##  3 Resistance         Ab Sensitivity 0.9721873 0.9090909 1.0000000
+    ##  4 Resistance         Ab Specificity 0.8352831 0.8098147 0.8602052
+    ##  5 Resistance         Kp    Accuracy 0.9878372 0.9794189 0.9951574
+    ##  6 Resistance         Kp   Precision 0.9049463 0.8378294 0.9592041
+    ##  7 Resistance         Kp Sensitivity 0.9880953 0.9611619 1.0000000
+    ##  8 Resistance         Kp Specificity 0.9878093 0.9793360 0.9946452
+    ##  9    Species         Ab    Accuracy 0.9877924 0.9794189 0.9939467
+    ## 10    Species         Ab   Precision 0.9843691 0.9665388 0.9962121
+    ## 11    Species         Ab Sensitivity 0.9764080 0.9563449 0.9925387
+    ## 12    Species         Ab Specificity 0.9929499 0.9852546 0.9982729
+    ## 13    Species         Kp    Accuracy 0.9927579 0.9866828 0.9975787
+    ## 14    Species         Kp   Precision 0.9757616 0.9435484 1.0000000
+    ## 15    Species         Kp Sensitivity 0.9767331 0.9469027 1.0000000
+    ## 16    Species         Kp Specificity 0.9956365 0.9900143 1.0000000
+    ## # ... with 1 more variables: species <chr>
+
 Variable Importance
 -------------------
 
@@ -552,7 +645,8 @@ vImp %>%
     geom_linerange(size = 0.75) +
     geom_point(size = 2, aes(color = color)) +
     xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
-    scale_color_discrete(breaks = c("Base Lipid A Structure", "Resistance Lipid A Structure")) +
+    scale_color_discrete(breaks = c("Published Base Lipid A Structure", 
+                                    "Published Resistance Lipid A Structure")) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
           legend.position = c(0.996, 0.992),
           legend.justification = c(1, 1),
@@ -578,7 +672,8 @@ vImp %>%
     geom_linerange(size = 0.75) +
     geom_point(size = 2, aes(color = color)) +
     xlab(expression(paste("Feature (", italic("m/z"), ")"))) +
-    scale_color_discrete(breaks = c("Base Lipid A Structure", "Resistance Lipid A Structure")) +
+    scale_color_discrete(breaks = c("Published Base Lipid A Structure", 
+                                    "Published Resistance Lipid A Structure")) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
           legend.position = c(0.996, 0.992),
           legend.justification = c(1, 1),
@@ -878,9 +973,28 @@ mixedSpecStats <- mixedAbSpecStats %>%
               ci_high = quantile(value, 1 - 0.05 / 2))
 
 
+mixedSpecStats
+```
 
+    ## Source: local data frame [48 x 6]
+    ## Groups: orgResults, n [?]
+    ## 
+    ## # A tibble: 48 x 6
+    ##      orgResults     n   statistic       avg    ci_low   ci_high
+    ##           <chr> <chr>       <chr>     <dbl>     <dbl>     <dbl>
+    ##  1 A. baumannii     1    Accuracy 0.6387172 0.6093237 0.6686752
+    ##  2 A. baumannii     1   Precision 0.4564523 0.4182856 0.4932799
+    ##  3 A. baumannii     1 Sensitivity 1.0000000 1.0000000 1.0000000
+    ##  4 A. baumannii     1 Specificity 0.4813829 0.4450950 0.5195947
+    ##  5 A. baumannii     2    Accuracy 0.6595055 0.6289980 0.6885661
+    ##  6 A. baumannii     2   Precision 0.4826549 0.4444401 0.5214545
+    ##  7 A. baumannii     2 Sensitivity 1.0000000 1.0000000 1.0000000
+    ##  8 A. baumannii     2 Specificity 0.5009819 0.4630402 0.5383503
+    ##  9 A. baumannii     3    Accuracy 0.7112633 0.6830169 0.7384189
+    ## 10 A. baumannii     3   Precision 0.5079206 0.4659656 0.5485759
+    ## # ... with 38 more rows
 
-
+``` r
 # Function to calculate Resistance Stats
 resStats <- function(resDf, posClass = "pos") {
     d1 <- map_df(1:5, function(n) {
@@ -921,7 +1035,27 @@ mixedResStats <- mixedAbResStats %>%
     summarize(avg = mean(value),
               ci_low = quantile(value, 0.05 / 2),
               ci_high = quantile(value, 1 - 0.05 / 2))
+
+mixedResStats
 ```
+
+    ## Source: local data frame [48 x 6]
+    ## Groups: orgResults, n [?]
+    ## 
+    ## # A tibble: 48 x 6
+    ##      orgResults     n   statistic       avg    ci_low   ci_high
+    ##           <chr> <chr>       <chr>     <dbl>     <dbl>     <dbl>
+    ##  1 A. baumannii     1    Accuracy 0.4623663 0.4332521 0.4921818
+    ##  2 A. baumannii     1   Precision 0.2313406 0.1994379 0.2621399
+    ##  3 A. baumannii     1 Sensitivity 1.0000000 1.0000000 1.0000000
+    ##  4 A. baumannii     1 Specificity 0.3585691 0.3271125 0.3911548
+    ##  5 A. baumannii     2    Accuracy 0.4460136 0.4153962 0.4756292
+    ##  6 A. baumannii     2   Precision 0.2196744 0.1902632 0.2500083
+    ##  7 A. baumannii     2 Sensitivity 1.0000000 1.0000000 1.0000000
+    ##  8 A. baumannii     2 Specificity 0.3436398 0.3124200 0.3747160
+    ##  9 A. baumannii     3    Accuracy 0.4810933 0.4499987 0.5132591
+    ## 10 A. baumannii     3   Precision 0.2214491 0.1899262 0.2527825
+    ## # ... with 38 more rows
 
 ### Plot statistics from simulated mixtures
 
@@ -1033,7 +1167,7 @@ twoRes %>%
     scale_fill_discrete(breaks = c("resistant", "susceptible")) +
     scale_color_discrete(guide = "none") +
     xlab("Percent Target Species by Volume") +
-    ylab("Colistin Resistance log(Score)") +
+    ylab("Species log(Score)") +
     theme(legend.key.size = unit(0.75, "lines"),
           legend.margin = margin(t = -0.5, unit = "lines"),
           legend.position = "bottom")
@@ -1088,7 +1222,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-12-30                  
+    ##  date     2018-01-02                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.3.3)

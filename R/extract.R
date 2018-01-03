@@ -92,12 +92,12 @@ extractFeatures <- function(specDf, featureVec, tol) {
         filter(mz == median(mz)) %>%
         mutate(real_mz = mz,
                mz = feat,
-               feat = paste0("mz", round(mz, 2)))
+               feat = paste0("mz", sigRound(mz, 4)))
     
     if(nrow(m) == 0) {
         m <- tibble(real_mz = NA,
                     mz = feat,
-                    feat = paste0("mz", round(mz, 2)),
+                    feat = paste0("mz", sigRound(mz, 4)),
                     relInt = 0,
                     type = specDf$type[1],
                     id = specDf$id[1])

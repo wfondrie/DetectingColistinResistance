@@ -38,6 +38,7 @@ library(devtools)
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
 source("../R/prepareData.R")
+source("../R/utilityFunctions.R")
 
 # for reproducibility
 set.seed(1832939)
@@ -98,9 +99,6 @@ determineFeatures <- function(trainList, n = 50) {
     # Preprocess spectra
     cat(paste0("Importing spectra for ",  lab, "...\n"))
     spec <- unlist(map(files[trainList$idx], preProcessSpec, hws = 80))
-    #spec <- preProcessSpec(files[trainList$idx], hws = 80)
-    #multiSpecIdx <- map_lgl(spec, ~ metaData(.)$num > 1)
-    #spec <- spec[!multiSpecIdx]
 
     # Detect peaks
     cat(paste0("Peak picking for ",  lab, "...\n"))

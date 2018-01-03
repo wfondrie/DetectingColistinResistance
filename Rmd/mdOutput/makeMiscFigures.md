@@ -173,7 +173,7 @@ twoSpec %>%
     ylab("Relative Intensity") +
     theme(legend.title = element_blank(),
           legend.margin = margin(l = -0.5, r = -0.2, unit = "lines"),
-          legend.key.size = unit(0.5, "lines"))
+          legend.key.width = unit(0.5, "lines"))
 ```
 
 ``` r
@@ -242,10 +242,32 @@ specInfo %>%
 
 ``` r
 ggsave("../results/librarySmall.pdf", height = 100, width = 150, unit = "mm", useDingbats = F)
-
-summary(specInfo$species)
-length(unique(specInfo$species))
 ```
+
+``` r
+summary(specInfo$species)
+```
+
+    ##                        V1     
+    ##  Acinetobacter baumannii:647  
+    ##  Klebsiella pneumoniae  :317  
+    ##  Pseudomonas aeruginosa :149  
+    ##  Staphylococcus aureus  :110  
+    ##  Enterobacter cloacae   :100  
+    ##  Serratia marcescens    : 97  
+    ##  (Other)                :648
+
+``` r
+cat(paste0("Number of Species: ", length(unique(specInfo$species)), "\n"))
+```
+
+    ## Number of Species: 50
+
+``` r
+cat(paste0("Number of Spectra: ", nrow(specInfo), "\n"))
+```
+
+    ## Number of Spectra: 2068
 
 Session Info
 ------------
@@ -261,7 +283,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-12-30                  
+    ##  date     2018-01-02                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.3.3)

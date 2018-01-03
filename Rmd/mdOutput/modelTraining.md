@@ -45,6 +45,7 @@ library(devtools)
 source("../R/preProcessSpec.R")
 source("../R/extract.R")
 source("../R/prepareData.R")
+source("../R/utilityFunctions.R")
 
 # for reproducibility
 set.seed(1832939)
@@ -107,9 +108,6 @@ determineFeatures <- function(trainList, n = 50) {
     # Preprocess spectra
     cat(paste0("Importing spectra for ",  lab, "...\n"))
     spec <- unlist(map(files[trainList$idx], preProcessSpec, hws = 80))
-    #spec <- preProcessSpec(files[trainList$idx], hws = 80)
-    #multiSpecIdx <- map_lgl(spec, ~ metaData(.)$num > 1)
-    #spec <- spec[!multiSpecIdx]
 
     # Detect peaks
     cat(paste0("Peak picking for ",  lab, "...\n"))
@@ -312,15 +310,15 @@ cat(c("Executions time:", round((times$toc - times$tic)/60, 0), "min"))
 session_info()
 ```
 
-    ## 2973.07 sec elapsed
-    ## Executions time: 50 min setting  value                       
+    ## 3686.18 sec elapsed
+    ## Executions time: 61 min setting  value                       
     ##  version  R version 3.4.0 (2017-04-21)
     ##  system   x86_64, mingw32             
     ##  ui       RTerm                       
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2017-12-30                  
+    ##  date     2018-01-02                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.3.3)
