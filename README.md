@@ -1,7 +1,7 @@
-Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids
+Pathogen Identification Direct from Polymicrobial Specimens Using Membrane Glycolipids
 ================
 William E Fondrie,
-January 02, 2018
+January 18, 2018
 
 -   [Introduction](#introduction)
 -   [Directory structure](#directory-structure)
@@ -14,7 +14,7 @@ January 02, 2018
 Introduction
 ------------
 
-This repository contains the code and data required to reproduce the analysis presented in [*Machine learning enables pathogen identification and detection of antimicrobial resistance from mass spectrometry analysis of membrane glycolipids*]().
+This repository contains the code required to reproduce the analysis presented in [*Pathogen Identification Direct from Polymicrobial Specimens Using Membrane Glycolipids*](). The data required for this analysis (`data.zip` below) can be downloaded from [here]().
 
 **WARNING:** When attempting to reproduce this analysis, it should be noted that `Rmd/simulateCompleSpectra.Rmd` requires approximately 36 Gb of memory to execute. Additionally, the entire analysis time may take a number of hours depending on the hardware.
 
@@ -148,8 +148,8 @@ cat(c("Execution time:", round((times$toc - times$tic)/60, 0), "min\n\n"))
 session_info()
 ```
 
-    ## 17743.53 sec elapsed
-    ## Execution time: 296 min
+    ## 3490.38 sec elapsed
+    ## Execution time: 58 min
     ## 
     ##  setting  value                       
     ##  version  R version 3.4.0 (2017-04-21)
@@ -158,7 +158,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2018-01-02                  
+    ##  date     2018-01-18                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.3.3)
@@ -246,7 +246,7 @@ session_info()
     ##  stringi              1.1.5    2017-04-07 CRAN (R 3.4.0)
     ##  stringr            * 1.2.0    2017-02-18 CRAN (R 3.4.0)
     ##  tibble             * 1.3.1    2017-05-17 CRAN (R 3.4.0)
-    ##  tictoc             * 1.0      2014-06-17 CRAN (R 3.4.0)
+    ##  tictoc               1.0      2014-06-17 CRAN (R 3.4.0)
     ##  tidyr              * 0.6.3    2017-05-15 CRAN (R 3.4.0)
     ##  tidyverse          * 1.1.1    2017-01-27 CRAN (R 3.4.0)
     ##  tools                3.4.0    2017-04-21 local         

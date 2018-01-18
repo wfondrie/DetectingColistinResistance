@@ -214,7 +214,7 @@ session_info()
     ##  language (EN)                        
     ##  collate  English_United States.1252  
     ##  tz       America/New_York            
-    ##  date     2018-01-02                  
+    ##  date     2018-01-18                  
     ## 
     ##  package            * version  date       source        
     ##  assertthat           0.2.0    2017-04-11 CRAN (R 3.3.3)
@@ -302,7 +302,7 @@ session_info()
     ##  stringi              1.1.5    2017-04-07 CRAN (R 3.4.0)
     ##  stringr            * 1.2.0    2017-02-18 CRAN (R 3.4.0)
     ##  tibble             * 1.3.1    2017-05-17 CRAN (R 3.4.0)
-    ##  tictoc             * 1.0      2014-06-17 CRAN (R 3.4.0)
+    ##  tictoc               1.0      2014-06-17 CRAN (R 3.4.0)
     ##  tidyr              * 0.6.3    2017-05-15 CRAN (R 3.4.0)
     ##  tidyverse          * 1.1.1    2017-01-27 CRAN (R 3.4.0)
     ##  tools                3.4.0    2017-04-21 local         
