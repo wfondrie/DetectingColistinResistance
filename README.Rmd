@@ -20,11 +20,12 @@ knitr::opts_knit$set(verbose = TRUE)
 
 
 ## Introduction
-This repository contains the code required to reproduce the analysis presented in [*Pathogen Identification Direct from Polymicrobial Specimens Using Membrane Glycolipids*](). The data required for this analysis (`data.zip` below) can be downloaded from [here]().
+This repository contains the code required to reproduce the analysis presented in [*Pathogen Identification Direct from Polymicrobial Specimens Using Membrane Glycolipids*](https://doi.org/10.1038/s41598-018-33681-8). The data required for this analysis (`data.zip` below) can be downloaded from [here](). *We are currently in the process of working with the UMB Office of Technology Transfer to provide a download link. In the interim, please contact dgoodlett@rx.umaryland.edu and the data will be provided to you promptly.*
 
 **WARNING:** When attempting to reproduce this analysis, it should be noted that `Rmd/simulateCompleSpectra.Rmd` requires approximately 36 Gb of memory to execute. Additionally, the entire analysis time may take a number of hours depending on the hardware.
 
-Order of analysis (see the Rmd subdirectory for details): 
+Order of analysis (see the Rmd subdirectory for details):  
+
 1. [modelTraining.Rmd](Rmd/mdOutput/modelTraining.md)  
 2. [simulateComplexSpectra.Rmd](Rmd/mdOutput/simulateComplexSpectra.md)  
 3. [mixtureAnalysis.Rmd](Rmd/mdOutput/mixtureAnalysis.md)  
