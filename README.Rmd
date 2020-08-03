@@ -96,7 +96,7 @@ tictoc::tic()
 unzipData <- FALSE # change to "TRUE" to unzip "data.zip" in the data directory
 
 if(unzipData) {
-    unzip("data/data.zip", overwrite = T, exdir = "../data")
+    unzip("data/data.zip", overwrite = T, exdir = ".")
 }
 
 library(rmarkdown)
